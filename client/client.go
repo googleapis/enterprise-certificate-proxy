@@ -13,7 +13,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/enterprise-certificate-proxy/client/util"
+	"github.com/googleapis/enterprise-certificate-proxy/client/util"
 )
 
 const signAPI = "EnterpriseCertSigner.Sign"
