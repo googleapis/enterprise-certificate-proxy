@@ -1,8 +1,0 @@
-{
-  "enterprise_cert": {
-    "libs": {
-      "signer_binary": "C:/Program Files (x86)/Google/Endpoint Verification/signer.exe"
-    }
-  }
-}
-

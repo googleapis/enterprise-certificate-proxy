@@ -8,17 +8,13 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
 )
 
-const metadataFileName = ".secureConnect/context_aware_metadata.json"
+const configFileName = "enterprise_certificate_config.json"
 
-// Metadata represents the secureConnect metadata JSON file.
-type Metadata struct {
-	EnterpriseCert EnterpriseCert `json:"enterprise_cert"`
-}
-
-// EnterpriseCert section contains parameters for initializing signer.
-type EnterpriseCert struct {
+// EnterpriseCertificateConfig contains parameters for initializing signer.
+type EnterpriseCertificateConfig struct {
 	Libs Libs `json:"libs"`
 }
 
@@ -27,9 +23,9 @@ type Libs struct {
 	SignerBinary string `json:"signer_binary"`
 }
 
-// LoadSignerBinaryPath retrieves the path of the signer binary from the metadata file.
-func LoadSignerBinaryPath(metadataFileName string) (path string, err error) {
-	jsonFile, err := os.Open(metadataFileName)
+// LoadSignerBinaryPath retrieves the path of the signer binary from the config file.
+func LoadSignerBinaryPath(configFilePath string) (path string, err error) {
+	jsonFile, err := os.Open(configFilePath)
 	if err != nil {
 		return "", err
 	}
@@ -38,12 +34,12 @@ func LoadSignerBinaryPath(metadataFileName string) (path string, err error) {
 	if err != nil {
 		return "", err
 	}
-	var metadata Metadata
-	err = json.Unmarshal(byteValue, &metadata)
+	var config EnterpriseCertificateConfig
+	err = json.Unmarshal(byteValue, &config)
 	if err != nil {
 		return "", err
 	}
-	signerBinaryPath := metadata.EnterpriseCert.Libs.SignerBinary
+	signerBinaryPath := config.Libs.SignerBinary
 	if signerBinaryPath == "" {
 		return "", errors.New("Signer binary path is missing.")
 	}
@@ -62,7 +58,15 @@ func guessUnixHomeDir() string {
 	return ""
 }
 
-// GetMetadataFilePath returns the path of the well-known secureConnect metadata JSON file.
-func GetMetadataFilePath() (path string) {
-	return filepath.Join(guessUnixHomeDir(), metadataFileName)
+func getDefaultConfigFileDirectory() (directory string) {
+	if runtime.GOOS == "windows" {
+		return "AppData/Roaming/gcloud"
+	} else {
+		return ".config/gcloud"
+	}
+}
+
+// GetDefaultConfigFilePath returns the default path of the enterprise certificate config file created by gCloud.
+func GetDefaultConfigFilePath() (path string) {
+	return filepath.Join(guessUnixHomeDir(), getDefaultConfigFileDirectory(), configFileName)
 }
