@@ -46,7 +46,7 @@ func LoadSignerBinaryPath(configFilePath string) (path string, err error) {
 	return signerBinaryPath, nil
 }
 
-func guessUnixHomeDir() string {
+func guessHomeDir() string {
 	// Prefer $HOME over user.Current due to glibc bug: golang.org/issue/13470
 	if v := os.Getenv("HOME"); v != "" {
 		return v
@@ -60,13 +60,13 @@ func guessUnixHomeDir() string {
 
 func getDefaultConfigFileDirectory() (directory string) {
 	if runtime.GOOS == "windows" {
-		return "AppData/Roaming/gcloud"
+		return filepath.Join(os.Getenv("APPDATA"), "gcloud")
 	} else {
-		return ".config/gcloud"
+		return filepath.Join(guessHomeDir(), ".config/gcloud")
 	}
 }
 
 // GetDefaultConfigFilePath returns the default path of the enterprise certificate config file created by gCloud.
 func GetDefaultConfigFilePath() (path string) {
-	return filepath.Join(guessUnixHomeDir(), getDefaultConfigFileDirectory(), configFileName)
+	return filepath.Join(getDefaultConfigFileDirectory(), configFileName)
 }
