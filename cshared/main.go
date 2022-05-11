@@ -26,11 +26,11 @@ import (
 
 func getCertPem(configFilePath string) []byte {
 	key, err := client.Cred(configFilePath)
-	defer key.Close()
 	if err != nil {
 		log.Printf("Could not create client using config %s: %v", configFilePath, err)
 		return nil
 	}
+	defer key.Close()
 
 	certChain := key.CertificateChain()
 	certChainPem := []byte{}
@@ -65,11 +65,11 @@ func GetCertPemForPython(configFilePath *C.char, certHolder *byte, certHolderLen
 func SignForPython(configFilePath *C.char, digest *byte, digestLen int, sigHolder *byte, sigHolderLen int) int {
 	// First create a handle around the specified certificate and private key.
 	key, err := client.Cred(C.GoString(configFilePath))
-	defer key.Close()
 	if err != nil {
 		log.Printf("Could not create client using config %s: %v", C.GoString(configFilePath), err)
 		return 0
 	}
+	defer key.Close()
 
 	var isRsa bool
 	switch key.Public().(type) {
