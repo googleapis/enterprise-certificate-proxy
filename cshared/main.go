@@ -108,6 +108,10 @@ func SignForPython(configFilePath *C.char, digest *byte, digestLen int, sigHolde
 
 	// Create a Go buffer around the output buffer and copy the signature into the buffer
 	outBytes := unsafe.Slice(sigHolder, sigHolderLen)
+	if sigHolderLen < len(signature) {
+	    log.Print("The sigHolder buffer size %d is smaller than the signature size %d", sigHolderLen, len(signature))
+	    return 0
+	}
 	for i := 0; i < len(signature); i++ {
 		outBytes[i] = signature[i]
 	}
