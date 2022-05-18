@@ -6,8 +6,6 @@ package keychain
 import (
 	"bytes"
 	"crypto"
-	"crypto/rsa"
-	"crypto/sha256"
 	"testing"
 	"unsafe"
 )
