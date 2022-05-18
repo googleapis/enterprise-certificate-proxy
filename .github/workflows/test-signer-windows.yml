@@ -1,0 +1,27 @@
+name: Build and Test Signer Windows
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.18
+
+    - name: Build
+      working-directory: ./internal/signer/windows
+      run: go build -v ./...
+
+    - name: Test
+      working-directory: ./internal/signer/winddows
+      run: go test -v ./...
