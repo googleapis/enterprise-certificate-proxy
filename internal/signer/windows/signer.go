@@ -69,13 +69,7 @@ func (k *EnterpriseCertSigner) Public(ignored struct{}, publicKey *[]byte) (err 
 
 // Sign signs a message by encrypting a message digest.
 func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
-	var opts crypto.SignerOpts
-	if args.Opts != nil {
-		opts = args.Opts
-	} else {
-		opts = args.Hash
-	}
-	*resp, err = k.key.Sign(nil, args.Digest, opts)
+	*resp, err = k.key.Sign(nil, args.Digest, args.Opts)
 	return
 }
 
@@ -96,8 +90,7 @@ func main() {
 		log.Fatalf("Failed to register enterprise cert signer with net/rpc: %v", err)
 	}
 
-	// If the parent process dies, we should exit. This prevents zombie
-	// rpcservers sticking around when uplink restarts.
+	// If the parent process dies, we should exit.
 	// We can detect this by periodically checking if the PID of the parent
 	// process is 1 (https://stackoverflow.com/a/2035683).
 	go func() {
