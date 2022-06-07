@@ -8,6 +8,10 @@ To interact the client certificates, application code should not need to use mos
 
 TBD
 
+## Build binaries
+
+For 64-bit Linux, run `./build/scripts/linux_64bit.sh`.
+
 ## Contributing
 
 Contributions to this library are always welcome and highly encouraged. See the [CONTRIBUTING](contributing) documentation for more information on how to get started.
