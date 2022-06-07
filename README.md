@@ -10,7 +10,11 @@ TBD
 
 ## Build binaries
 
-For 64-bit Linux, run `./build/scripts/linux_64bit.sh`.
+For 64-bit MacOS, run `./build/scripts/darwin_64bit.sh`. The binaries will be placed in `build/darwin_64bit` folder.
+
+For 64-bit Linux, run `./build/scripts/linux_64bit.sh`. The binaries will be placed in `build/linux_64bit` folder.
+
+For 64-bit Windows, in powershell terminal, run `powershell.exe .\build\scripts\windows_64bit.sh`. The binaries will be placed in `build\windows_64bit` folder.
 
 ## Contributing
 
