@@ -1,0 +1,4 @@
+# compiled binaries
+build/windows_amd64/*
+build/linux_amd64/*
+build/darwin_amd64/*
