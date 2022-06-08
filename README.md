@@ -10,11 +10,11 @@ TBD
 
 ## Build binaries
 
-For amd64 MacOS, run `./build/scripts/darwin_amd64.sh`. The binaries will be placed in `build/darwin_amd64` folder.
+For amd64 MacOS, run `./build/scripts/darwin_amd64.sh`. The binaries will be placed in `build/bin/darwin_amd64` folder.
 
-For amd64 Linux, run `./build/scripts/linux_amd64.sh`. The binaries will be placed in `build/linux_amd64` folder.
+For amd64 Linux, run `./build/scripts/linux_amd64.sh`. The binaries will be placed in `build/bin/linux_amd64` folder.
 
-For amd64 Windows, in powershell terminal, run `powershell.exe .\build\scripts\windows_amd64.sh`. The binaries will be placed in `build\windows_amd64` folder.
+For amd64 Windows, in powershell terminal, run `powershell.exe .\build\scripts\windows_amd64.sh`. The binaries will be placed in `build\bin\windows_amd64` folder.
 
 ## Contributing
 
