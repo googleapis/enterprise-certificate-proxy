@@ -106,5 +106,5 @@ func main() {
 		}
 	}()
 
-	rpc.ServeConn(&Transport{os.Stdin, os.Stdout})
+	rpc.ServeConn(&Connection{os.Stdin, os.Stdout})
 }
