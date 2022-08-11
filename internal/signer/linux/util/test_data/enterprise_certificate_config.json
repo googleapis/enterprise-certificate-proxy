@@ -1,0 +1,10 @@
+{
+  "cert_info": {
+    "slot": "0x1739427",
+    "label": "gecc"
+  },  
+  "libs": {
+    "pkcs11_module": "pkcs11_module.so"
+  }
+}
+

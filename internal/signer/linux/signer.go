@@ -3,7 +3,8 @@
 // license that can be found in the LICENSE file.
 //
 // Signer.go is a net/rpc server that listens on stdin/stdout, exposing
-// methods that perform device certificate signing for Windows OS using ncrypt utils.
+// methods that perform device certificate signing for Linux using PKCS11
+// shared library.
 // This server is intended to be launched as a subprocess by the signer client,
 // and should not be launched manually as a stand-alone process.
 package main
@@ -17,7 +18,6 @@ import (
 	"log"
 	"net/rpc"
 	"os"
-	"signer/ncrypt"
 	"signer/util"
 	"time"
 )
@@ -39,7 +39,7 @@ type SignArgs struct {
 
 // A EnterpriseCertSigner exports RPC methods for signing.
 type EnterpriseCertSigner struct {
-	key *ncrypt.Key
+	key *util.Key
 }
 
 // A Connection wraps a pair of unidirectional streams as an io.ReadWriteCloser.
@@ -60,7 +60,7 @@ func (c *Connection) Close() error {
 
 // CertificateChain returns the credential as a raw X509 cert chain. This
 // contains the public key.
-func (k *EnterpriseCertSigner) CertificateChain(ignored struct{}, certificateChain *[][]byte) error {
+func (k *EnterpriseCertSigner) CertificateChain(ignored struct{}, certificateChain *[][]byte) (err error) {
 	*certificateChain = k.key.CertificateChain()
 	return nil
 }
@@ -82,12 +82,11 @@ func main() {
 		log.Fatalln("Signer is not meant to be invoked manually, exiting...")
 	}
 	configFilePath := os.Args[1]
-	certInfo, err := util.LoadCertInfo(configFilePath)
-
+	config, err := util.LoadConfig(configFilePath)
 	enterpriseCertSigner := new(EnterpriseCertSigner)
-	enterpriseCertSigner.key, err = ncrypt.Cred(certInfo.Issuer, certInfo.Store, certInfo.Provider)
+	enterpriseCertSigner.key, err = util.Cred(config.Libs.PKCS11Module, config.CertInfo.Slot, config.CertInfo.Label)
 	if err != nil {
-		log.Fatalf("Failed to initialize enterprise cert signer using ncrypt: %v", err)
+		log.Fatalf("Failed to initialize enterprise cert signer using pkcs11: %v", err)
 	}
 
 	if err := rpc.Register(enterpriseCertSigner); err != nil {
@@ -106,5 +105,5 @@ func main() {
 		}
 	}()
 
-	rpc.ServeConn(&Transport{os.Stdin, os.Stdout})
+	rpc.ServeConn(&Connection{os.Stdin, os.Stdout})
 }
