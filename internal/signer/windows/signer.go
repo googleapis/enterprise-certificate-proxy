@@ -1,3 +1,7 @@
+// Copyright 2022 Google LLC.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+//
 // Signer.go is a net/rpc server that listens on stdin/stdout, exposing
 // methods that perform device certificate signing for Windows OS using ncrypt utils.
 // This server is intended to be launched as a subprocess by the signer client,
@@ -38,16 +42,16 @@ type EnterpriseCertSigner struct {
 	key *ncrypt.Key
 }
 
-// A Transport wraps a pair of unidirectional streams as an io.ReadWriteCloser.
-type Transport struct {
+// A Connection wraps a pair of unidirectional streams as an io.ReadWriteCloser.
+type Connection struct {
 	io.ReadCloser
 	io.WriteCloser
 }
 
-// Close closes t's underlying ReadCloser and WriteCloser.
-func (t *Transport) Close() error {
-	rerr := t.ReadCloser.Close()
-	werr := t.WriteCloser.Close()
+// Close closes c's underlying ReadCloser and WriteCloser.
+func (c *Connection) Close() error {
+	rerr := c.ReadCloser.Close()
+	werr := c.WriteCloser.Close()
 	if rerr != nil {
 		return rerr
 	}
@@ -102,5 +106,5 @@ func main() {
 		}
 	}()
 
-	rpc.ServeConn(&Transport{os.Stdin, os.Stdout})
+	rpc.ServeConn(&Connection{os.Stdin, os.Stdout})
 }
