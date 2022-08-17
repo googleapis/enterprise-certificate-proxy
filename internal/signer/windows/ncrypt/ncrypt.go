@@ -43,7 +43,6 @@ type pssPaddingInfo struct {
 
 func algID(hashFunc crypto.Hash) (*uint16, bool) {
 	algID, ok := map[crypto.Hash][]uint16{
-		crypto.SHA1:   {'S', 'H', 'A', '1', 0},           // BCRYPT_SHA1_ALGORITHM
 		crypto.SHA256: {'S', 'H', 'A', '2', '5', '6', 0}, // BCRYPT_SHA256_ALGORITHM
 	}[hashFunc]
 	return &algID[0], ok
