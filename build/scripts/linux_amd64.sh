@@ -8,4 +8,8 @@ mkdir -p ./build/bin/linux_amd64
 go build -buildmode=c-shared -o build/bin/linux_amd64/signer.so cshared/main.go
 rm build/bin/linux_amd64/signer.h
 
-# (TODO) Build the signer binary
+# Build the signer binary
+cd ./internal/signer/linux
+go build
+mv signer ./../../../build/bin/linux_amd64
+cd ./../../..
