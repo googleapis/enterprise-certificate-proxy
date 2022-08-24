@@ -32,22 +32,16 @@ import (
 // https://developer.apple.com/documentation/security/seckeyalgorithm
 var (
 	ecdsaAlgorithms = map[crypto.Hash]C.CFStringRef{
-		crypto.SHA1:   C.kSecKeyAlgorithmECDSASignatureDigestX962SHA1,
-		crypto.SHA224: C.kSecKeyAlgorithmECDSASignatureDigestX962SHA224,
 		crypto.SHA256: C.kSecKeyAlgorithmECDSASignatureDigestX962SHA256,
 		crypto.SHA384: C.kSecKeyAlgorithmECDSASignatureDigestX962SHA384,
 		crypto.SHA512: C.kSecKeyAlgorithmECDSASignatureDigestX962SHA512,
 	}
 	rsaPKCS1v15Algorithms = map[crypto.Hash]C.CFStringRef{
-		crypto.SHA1:   C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA1,
-		crypto.SHA224: C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA224,
 		crypto.SHA256: C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA256,
 		crypto.SHA384: C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA384,
 		crypto.SHA512: C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA512,
 	}
 	rsaPSSAlgorithms = map[crypto.Hash]C.CFStringRef{
-		crypto.SHA1:   C.kSecKeyAlgorithmRSASignatureDigestPSSSHA1,
-		crypto.SHA224: C.kSecKeyAlgorithmRSASignatureDigestPSSSHA224,
 		crypto.SHA256: C.kSecKeyAlgorithmRSASignatureDigestPSSSHA256,
 		crypto.SHA384: C.kSecKeyAlgorithmRSASignatureDigestPSSSHA384,
 		crypto.SHA512: C.kSecKeyAlgorithmRSASignatureDigestPSSSHA512,

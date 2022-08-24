@@ -23,8 +23,6 @@ import (
 )
 
 func init() {
-	gob.Register(crypto.SHA1)
-	gob.Register(crypto.SHA224)
 	gob.Register(crypto.SHA256)
 	gob.Register(crypto.SHA384)
 	gob.Register(crypto.SHA512)
