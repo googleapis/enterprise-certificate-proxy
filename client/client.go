@@ -84,7 +84,7 @@ func (k *Key) Public() crypto.PublicKey {
 	return k.publicKey
 }
 
-// Sign signs a message by encrypting a message digest, using the specified signer options.
+// Sign signs a message digest, using the specified signer options.
 func (k *Key) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (signed []byte, err error) {
 	err = k.client.Call(signAPI, SignArgs{Digest: digest, Opts: opts}, &signed)
 	return

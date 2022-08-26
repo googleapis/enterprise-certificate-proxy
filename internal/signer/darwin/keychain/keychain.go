@@ -173,7 +173,7 @@ func (k *Key) Public() crypto.PublicKey {
 	return k.certs[0].PublicKey
 }
 
-// Sign signs a message by encrypting a message digest. Here, we pass off
+// Sign signs a message digest. Here, we pass off
 // the signing to Keychain library.
 func (k *Key) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) (signature []byte, err error) {
 	// Map the signing algorithm and hash function to a SecKeyAlgorithm constant.

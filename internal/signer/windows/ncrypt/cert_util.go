@@ -286,7 +286,7 @@ func (k *Key) Public() crypto.PublicKey {
 	return k.cert.PublicKey
 }
 
-// Sign signs a message by encrypting a message digest. Here, we pass off
+// Sign signs a message digest. Here, we pass off
 // the signing to the Windows CryptoNG library.
 func (k *Key) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
 	key, err := acquirePrivateKey(k.ctx)
