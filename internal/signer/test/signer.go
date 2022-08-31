@@ -65,7 +65,7 @@ func (k *EnterpriseCertSigner) Public(ignored struct{}, publicKey *[]byte) (err 
 	return err
 }
 
-// Sign signs a message by encrypting a message digest.
+// Sign signs a message digest.
 func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
 	*resp = args.Digest
 	return nil
