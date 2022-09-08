@@ -41,7 +41,7 @@ func LoadSignerBinaryPath(configFilePath string) (path string, err error) {
 	}
 	signerBinaryPath := config.Libs.SignerBinary
 	if signerBinaryPath == "" {
-		return "", errors.New("Signer binary path is missing.")
+		return "", errors.New("signer binary path is missing")
 	}
 	return signerBinaryPath, nil
 }
@@ -61,9 +61,8 @@ func guessHomeDir() string {
 func getDefaultConfigFileDirectory() (directory string) {
 	if runtime.GOOS == "windows" {
 		return filepath.Join(os.Getenv("APPDATA"), "gcloud")
-	} else {
-		return filepath.Join(guessHomeDir(), ".config/gcloud")
 	}
+	return filepath.Join(guessHomeDir(), ".config/gcloud")
 }
 
 // GetDefaultConfigFilePath returns the default path of the enterprise certificate config file created by gCloud.

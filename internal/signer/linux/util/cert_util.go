@@ -1,4 +1,3 @@
-// Cert_util provides helpers for working with certificates via PKCS11
 package util
 
 import (
@@ -11,16 +10,16 @@ import (
 
 // Cred returns a Key wrapping the first valid certificate in the pkcs11 module
 // matching a given slot and label.
-func Cred(pkcs11_module string, slot_uint32_str string, label string) (*Key, error) {
-	module, err := pkcs11.Open(pkcs11_module)
+func Cred(pkcs11Module string, slotUint32Str string, label string) (*Key, error) {
+	module, err := pkcs11.Open(pkcs11Module)
 	if err != nil {
 		return nil, err
 	}
-	slot_uint32, err := ParseHexString(slot_uint32_str)
+	slotUint32, err := ParseHexString(slotUint32Str)
 	if err != nil {
 		return nil, err
 	}
-	kslot, err := module.Slot(slot_uint32, pkcs11.Options{})
+	kslot, err := module.Slot(slotUint32, pkcs11.Options{})
 
 	certs, err := kslot.Objects(pkcs11.Filter{Class: pkcs11.ClassCertificate, Label: label})
 	if err != nil {

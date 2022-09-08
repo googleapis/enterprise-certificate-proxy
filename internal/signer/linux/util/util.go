@@ -9,14 +9,14 @@ import (
 	"strings"
 )
 
-// Parse hexadecimal string into uint32
+// ParseHexString parses string into uint32
 func ParseHexString(str string) (i uint32, err error) {
 	stripped := strings.Replace(str, "0x", "", -1)
-	result_uint64, err := strconv.ParseUint(stripped, 16, 32)
+	resultUint64, err := strconv.ParseUint(stripped, 16, 32)
 	if err != nil {
 		return 0, err
 	}
-	return uint32(result_uint64), nil
+	return uint32(resultUint64), nil
 }
 
 // EnterpriseCertificateConfig contains parameters for initializing signer.

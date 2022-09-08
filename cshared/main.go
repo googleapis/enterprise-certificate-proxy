@@ -76,11 +76,9 @@ func SignForPython(configFilePath *C.char, digest *byte, digestLen int, sigHolde
 	case *ecdsa.PublicKey:
 		isRsa = false
 		log.Print("the key is ecdsa key")
-		break
 	case *rsa.PublicKey:
 		isRsa = true
 		log.Print("the key is rsa key")
-		break
 	default:
 		log.Printf("unsupported key type")
 		return 0
