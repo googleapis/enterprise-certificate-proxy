@@ -1,3 +1,5 @@
+// Cert_util provides helpers for working with certificates via PKCS11
+
 package util
 
 import (

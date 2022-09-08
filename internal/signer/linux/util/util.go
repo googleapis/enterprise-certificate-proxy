@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// ParseHexString parses string into uint32
+// ParseHexString parses hexadecimal string into uint32
 func ParseHexString(str string) (i uint32, err error) {
 	stripped := strings.Replace(str, "0x", "", -1)
 	resultUint64, err := strconv.ParseUint(stripped, 16, 32)
