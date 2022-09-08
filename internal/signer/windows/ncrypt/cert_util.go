@@ -2,6 +2,7 @@
 // +build windows
 
 // Cert_util provides helpers for working with Windows certificates via crypt32.dll
+
 package ncrypt
 
 import (
