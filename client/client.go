@@ -1,8 +1,9 @@
 // Copyright 2022 Google LLC.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+
+// Package client is a cross-platform client for the signer binary (a.k.a."EnterpriseCertSigner").
 //
-// Client is a cross-platform client for the signer binary (a.k.a."EnterpriseCertSigner").
 // The signer binary is OS-specific, but exposes a standard set of APIs for the client to use.
 package client
 
