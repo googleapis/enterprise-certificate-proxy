@@ -155,7 +155,7 @@ func Cred(configFilePath string) (*Key, error) {
 	switch pub := k.publicKey.(type) {
 	case *rsa.PublicKey:
 		if pub.Size() < 256 {
-			return nil, fmt.Errorf("RSA modulus size is less than 2048 bits: %v", pub.Size())
+			return nil, fmt.Errorf("RSA modulus size is less than 2048 bits: %v", pub.Size()*8)
 		}
 	case *ecdsa.PublicKey:
 	default:
