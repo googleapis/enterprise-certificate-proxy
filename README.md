@@ -22,7 +22,7 @@ Before using ECP with your application/client, you should follow the instruction
 
 ### Installation
 
-1. Install openssl
+1. Install Openssl
 `brew install openssl@1.1`
 
 1. Install gcloud CLI (Cloud SDK) at: https://cloud.google.com/sdk/docs/install
