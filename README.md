@@ -8,11 +8,11 @@ To interact the client certificates, application code should not need to use mos
 
 Currently ECP is in Preview stage and all the APIs and configurations are **subject to change**.
 
-Tthe following platforms are supported by ECP:
+The following platforms/keystores are supported by ECP:
 
-- MacOS (Keychain, PKCS#11)
-- Windows (MyStore, PKCS#11)
-- Linux (PKCS#11 only)
+- MacOS: __Keychain__
+- Windows: __MyStore__
+- Linux: __PKCS#11__
 
 ## Quick Start Guide
 
@@ -60,14 +60,14 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
 
 ```json
 {
-  "cert_info": {
-    "keychain": {
+  "cert_configs": {
+    "macos_keychain": {
       "issuer": "YOUR_CERT_ISSUER",
     },
   },
   "libs": {
-      "ecp": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer",
-      "ecp_client": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer.dylib", 
+      "ecp_signer": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer",
+      "ecp_client_library": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer.dylib", 
   },
   "version": 1,
 }
@@ -76,16 +76,16 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
 #### Windows (MyStore)
 ```json
 {
-  "cert_info": {
-    "windows": {
+  "cert_configs": {
+    "windows_my_store": {
       "store": "MY",
       "provider": "current_user",
       "issuer": "YOUR_CERT_ISSUER",
     },
   },
   "libs": {
-      "ecp": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer",
-      "ecp_client": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer.dylib", 
+      "ecp_signer": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer",
+      "ecp_client_library": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer.dylib", 
   },
   "version": 1,
 }
@@ -94,7 +94,7 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
 #### Linux (PKCS#11)
 ```json
 {
-  "cert_info": {
+  "cert_configs": {
     "pkcs11": {
       "token_label": "YOUR_TOKEN_LABEL",
       "key_label": "YOUR_KEY_LABEL",
@@ -102,8 +102,8 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
     },
   },
   "libs": {
-    "ecp": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer",
-    "ecp_client": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer.dylib", 
+    "ecp_signer": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer",
+    "ecp_client_library": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer.dylib", 
     "pkcs11_module": "/usr/lib/x86_64-linux-gnu/pkcs11/libcredentialkit_pkcs11.so.0",
   },
   "version": 1,
