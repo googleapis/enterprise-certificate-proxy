@@ -7,6 +7,7 @@ package client
 
 import (
 	"bytes"
+	"crypto"
 	"errors"
 	"os"
 	"testing"
@@ -57,6 +58,17 @@ func TestClient_Sign(t *testing.T) {
 	}
 	if got, want := signed, []byte("testDigest"); !bytes.Equal(got, want) {
 		t.Errorf("Sign: got %c, want %c", got, want)
+	}
+}
+
+func TestClient_Sign_HashSizeMismatch(t *testing.T) {
+	key, err := Cred("testdata/enterprise_certificate_config.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = key.Sign(nil, []byte("testDigest"), crypto.SHA256)
+	if got, want := err.Error(), "Digest length of 10 bytes does not match Hash function size of 32 bytes"; got != want {
+		t.Errorf("Sign: got err %v, want err %v", got, want)
 	}
 }
 
