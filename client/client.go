@@ -9,6 +9,7 @@ package client
 
 import (
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/gob"
@@ -87,6 +88,9 @@ func (k *Key) Public() crypto.PublicKey {
 
 // Sign signs a message digest, using the specified signer options.
 func (k *Key) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (signed []byte, err error) {
+	if opts != nil && opts.HashFunc() != 0 && len(digest) != opts.HashFunc().Size() {
+		return nil, fmt.Errorf("Digest length of %v bytes does not match Hash function size of %v bytes", len(digest), opts.HashFunc().Size())
+	}
 	err = k.client.Call(signAPI, SignArgs{Digest: digest, Opts: opts}, &signed)
 	return
 }
@@ -146,6 +150,16 @@ func Cred(configFilePath string) (*Key, error) {
 	k.publicKey, ok = publicKey.(crypto.PublicKey)
 	if !ok {
 		return nil, fmt.Errorf("invalid public key type: %T", publicKey)
+	}
+
+	switch pub := k.publicKey.(type) {
+	case *rsa.PublicKey:
+		if pub.Size() < 256 {
+			return nil, fmt.Errorf("RSA modulus size is less than 2048 bits: %v", pub.Size()*8)
+		}
+	case *ecdsa.PublicKey:
+	default:
+		return nil, fmt.Errorf("unsupported public key type: %v", pub)
 	}
 
 	return k, nil

@@ -134,7 +134,7 @@ func signHashInternal(priv windows.Handle, pub crypto.PublicKey, digest []byte, 
 // subset of well-supported cryptographic primitives.
 //
 // Signature algorithms: ECDSA, RSA.
-// Hash functions: SHA-1, SHA-256.
+// Hash functions: SHA-256.
 // RSA schemes: RSASSA-PKCS1 and RSASSA-PSS.
 //
 // https://docs.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptsignhash
