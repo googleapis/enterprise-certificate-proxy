@@ -30,7 +30,11 @@ func getCertPem(configFilePath string) []byte {
 		log.Printf("Could not create client using config %s: %v", configFilePath, err)
 		return nil
 	}
-	defer key.Close()
+	defer func() {
+		if key.Close() != nil {
+			log.Printf("Failed to clean up key. %v", err)
+		}
+	}()
 
 	certChain := key.CertificateChain()
 	certChainPem := []byte{}
@@ -69,8 +73,11 @@ func SignForPython(configFilePath *C.char, digest *byte, digestLen int, sigHolde
 		log.Printf("Could not create client using config %s: %v", C.GoString(configFilePath), err)
 		return 0
 	}
-	defer key.Close()
-
+	defer func() {
+		if key.Close() != nil {
+			log.Printf("Failed to clean up key. %v", err)
+		}
+	}()
 	var isRsa bool
 	switch key.Public().(type) {
 	case *ecdsa.PublicKey:

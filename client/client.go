@@ -69,14 +69,16 @@ func (k *Key) CertificateChain() [][]byte {
 // Close closes the RPC connection and kills the signer subprocess.
 // Call this to free up resources when the Key object is no longer needed.
 func (k *Key) Close() error {
-	if err := k.client.Close(); err != nil {
-		return fmt.Errorf("failed to close RPC connection: %w", err)
-	}
 	if err := k.cmd.Process.Kill(); err != nil {
 		return fmt.Errorf("failed to kill signer process: %w", err)
 	}
 	if err := k.cmd.Wait(); err.Error() != "signal: killed" {
 		return fmt.Errorf("signer process was not killed: %w", err)
+	}
+	// The Pipes connecting the RPC client should have been closed when the signer subprocess was killed.
+	// Calling `k.client.Close()` before `k.cmd.Process.Kill()` or `k.cmd.Wait()` _will_ cause a segfault.
+	if err := k.client.Close(); err.Error() != "close |0: file already closed" {
+		return fmt.Errorf("failed to close RPC connection: %w", err)
 	}
 	return nil
 }
