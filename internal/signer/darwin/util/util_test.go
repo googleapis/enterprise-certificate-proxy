@@ -5,12 +5,12 @@ import (
 )
 
 func TestLoadCertInfo(t *testing.T) {
-	certInfo, err := LoadCertInfo("./test_data/certificate_config.json")
+	config, err := LoadConfig("./test_data/certificate_config.json")
 	if err != nil {
-		t.Errorf("LoadCertInfo error: %q", err)
+		t.Errorf("LoadConfig error: %q", err)
 	}
 	want := "Google Endpoint Verification"
-	if certInfo.Issuer != want {
-		t.Errorf("Expected issuer is %q, got: %q", want, certInfo.Issuer)
+	if config.CertInfo.Issuer != want {
+		t.Errorf("Expected issuer is %q, got: %q", want, config.CertInfo.Issuer)
 	}
 }

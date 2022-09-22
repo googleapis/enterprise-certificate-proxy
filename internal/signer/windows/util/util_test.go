@@ -5,20 +5,20 @@ import (
 )
 
 func TestLoadCertInfo(t *testing.T) {
-	certInfo, err := LoadCertInfo("./test_data/certificate_config.json")
+	config, err := LoadConfig("./test_data/certificate_config.json")
 	if err != nil {
-		t.Errorf("LoadCertInfo error: %q", err)
+		t.Errorf("LoadConfig error: %q", err)
 	}
 	want := "enterprise_v1_corp_client"
-	if certInfo.Issuer != want {
-		t.Errorf("Expected issuer is %q, got: %q", want, certInfo.Issuer)
+	if config.CertInfo.Issuer != want {
+		t.Errorf("Expected issuer is %q, got: %q", want, config.CertInfo.Issuer)
 	}
 	want = "MY"
-	if certInfo.Store != want {
-		t.Errorf("Expected store is %q, got: %q", want, certInfo.Store)
+	if config.CertInfo.Store != want {
+		t.Errorf("Expected store is %q, got: %q", want, config.CertInfo.Store)
 	}
 	want = "current_user"
-	if certInfo.Provider != want {
-		t.Errorf("Expected provider is %q, got: %q", want, certInfo.Provider)
+	if config.CertInfo.Provider != want {
+		t.Errorf("Expected provider is %q, got: %q", want, config.CertInfo.Provider)
 	}
 }

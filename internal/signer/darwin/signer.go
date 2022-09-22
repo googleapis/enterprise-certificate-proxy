@@ -80,10 +80,10 @@ func main() {
 		log.Fatalln("Signer is not meant to be invoked manually, exiting...")
 	}
 	configFilePath := os.Args[1]
-	certInfo, err := util.LoadCertInfo(configFilePath)
+	config, err := util.LoadConfig(configFilePath)
 
 	enterpriseCertSigner := new(EnterpriseCertSigner)
-	enterpriseCertSigner.key, err = keychain.Cred(certInfo.Issuer)
+	enterpriseCertSigner.key, err = keychain.Cred(config.CertInfo.Issuer)
 	if err != nil {
 		log.Fatalf("Failed to initialize enterprise cert signer using keychain: %v", err)
 	}
