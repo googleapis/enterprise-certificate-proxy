@@ -19,8 +19,8 @@ func ParseHexString(str string) (i uint32, err error) {
 	return uint32(resultUint64), nil
 }
 
-const configsKey := "cert_configs"
-const pkcs11Key := "pkcs11"
+const configsKey = "cert_configs"
+const pkcs11Key = "pkcs11"
 
 // EnterpriseCertificateConfig contains parameters for initializing signer.
 type EnterpriseCertificateConfig struct {
@@ -46,14 +46,14 @@ func LoadConfig(configFilePath string) (config EnterpriseCertificateConfig, err 
 		return EnterpriseCertificateConfig{}, err
 	}
 
-	var config map[string]interface{}
-	err = json.Unmarshal(byteValue, &config)
+	var ecpConfig map[string]interface{}
+	err = json.Unmarshal(byteValue, &ecpConfig)
 
 	if err != nil {
 		return EnterpriseCertificateConfig{}, err
 	}
 
-	for -, value := range configs[configsKey].([]interface{}) {
+	for _, value := range ecpConfig[configsKey].([]interface{}) {
 		if v, ok := value.(map[string]interface{})[pkcs11Key]; ok {
 			b, err := json.Marshal(v)
 
@@ -62,17 +62,12 @@ func LoadConfig(configFilePath string) (config EnterpriseCertificateConfig, err 
 			}
 
 			var certInfo CertInfo
-			err := json.Unmarshal(b, &certInfo)
+			err = json.Unmarshal(b, &certInfo)
 			if err != nil {
 				return EnterpriseCertificateConfig{}, err
 			}
 			return EnterpriseCertificateConfig{certInfo}, nil
 		}
-	}
-
-	err = json.Unmarshal(byteValue, &config)
-	if err != nil {
-		return EnterpriseCertificateConfig{}, err
 	}
 
 	return EnterpriseCertificateConfig{}, nil
