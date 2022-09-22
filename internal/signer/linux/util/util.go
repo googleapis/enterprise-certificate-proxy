@@ -19,20 +19,18 @@ func ParseHexString(str string) (i uint32, err error) {
 	return uint32(resultUint64), nil
 }
 
+const configsKey := "cert_configs"
+const pkcs11Key := "pkcs11"
+
 // EnterpriseCertificateConfig contains parameters for initializing signer.
 type EnterpriseCertificateConfig struct {
-	CertInfo CertInfo `json:"cert_info"`
-	Libs     Libs     `json:"libs"`
+       CertInfo CertInfo
 }
 
 // CertInfo contains parameters describing the certificate to use.
 type CertInfo struct {
 	Slot  string `json:"slot"`  // The hexadecimal representation of the uint36 slot ID. (ex:0x1739427)
 	Label string `json:"label"` // The token label (ex: gecc)
-}
-
-// Libs contains the path to helper libs
-type Libs struct {
 	PKCS11Module string `json:"pkcs11_module"` // The path to the pkcs11 module (shared lib)
 }
 
@@ -47,10 +45,35 @@ func LoadConfig(configFilePath string) (config EnterpriseCertificateConfig, err 
 	if err != nil {
 		return EnterpriseCertificateConfig{}, err
 	}
+
+	var config map[string]interface{}
+	err = json.Unmarshal(byteValue, &config)
+
+	if err != nil {
+		return EnterpriseCertificateConfig{}, err
+	}
+
+	for -, value := range configs[configsKey].([]interface{}) {
+		if v, ok := value.(map[string]interface{})[pkcs11Key]; ok {
+			b, err := json.Marshal(v)
+
+			if err != nil {
+				return EnterpriseCertificateConfig{}, err
+			}
+
+			var certInfo CertInfo
+			err := json.Unmarshal(b, &certInfo)
+			if err != nil {
+				return EnterpriseCertificateConfig{}, err
+			}
+			return EnterpriseCertificateConfig{certInfo}, nil
+		}
+	}
+
 	err = json.Unmarshal(byteValue, &config)
 	if err != nil {
 		return EnterpriseCertificateConfig{}, err
 	}
-	return config, nil
 
+	return EnterpriseCertificateConfig{}, nil
 }

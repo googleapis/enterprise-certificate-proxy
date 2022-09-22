@@ -11,7 +11,7 @@ import (
 	"runtime"
 )
 
-const configFileName = "enterprise_certificate_config.json"
+const configFileName = "certificate_config.json"
 
 // EnterpriseCertificateConfig contains parameters for initializing signer.
 type EnterpriseCertificateConfig struct {
@@ -20,7 +20,7 @@ type EnterpriseCertificateConfig struct {
 
 // Libs specifies the locations of helper libraries.
 type Libs struct {
-	SignerBinary string `json:"signer_binary"`
+	SignerBinary string `json:"ecp"`
 }
 
 // LoadSignerBinaryPath retrieves the path of the signer binary from the config file.

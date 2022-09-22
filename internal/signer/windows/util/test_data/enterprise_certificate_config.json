@@ -1,8 +1,0 @@
-{
-  "cert_info": {
-    "issuer": "enterprise_v1_corp_client",
-    "store": "MY",
-    "provider": "current_user"
-  }
-}
-

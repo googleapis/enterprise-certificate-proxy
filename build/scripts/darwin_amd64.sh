@@ -11,5 +11,5 @@ mv signer ./../../../build/bin/darwin_amd64
 cd ./../../..
 
 # Build the signer library
-go build -buildmode=c-shared -o build/bin/darwin_amd64/signer.dylib cshared/main.go
+go build -buildmode=c-shared -o build/bin/darwin_amd64/libsigner.dylib cshared/main.go
 rm build/bin/darwin_amd64/signer.h

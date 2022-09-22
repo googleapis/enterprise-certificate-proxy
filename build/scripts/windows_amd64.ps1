@@ -14,5 +14,5 @@ Move-Item .\signer.exe ..\..\..\build\bin\windows_amd64\
 Set-Location ..\..\..\
 
 # Build the signer library
-go build -buildmode=c-shared -o .\build\bin\windows_amd64\signer.dll .\cshared\main.go
+go build -buildmode=c-shared -o .\build\bin\windows_amd64\libsigner.dll .\cshared\main.go
 Remove-Item .\build\bin\windows_amd64\signer.h

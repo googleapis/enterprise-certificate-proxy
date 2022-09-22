@@ -7,9 +7,12 @@ import (
 	"os"
 )
 
+const configsKey := "cert_configs"
+const winMyStoreKey := "windows_my_store"
+
 // EnterpriseCertificateConfig contains parameters for initializing signer.
 type EnterpriseCertificateConfig struct {
-	CertInfo CertInfo `json:"cert_info"`
+	CertInfo CertInfo
 }
 
 // CertInfo contains parameters describing the certificate to use.
@@ -20,21 +23,45 @@ type CertInfo struct {
 }
 
 // LoadCertInfo retrieves the certificate info from the config file.
-func LoadCertInfo(configFilePath string) (certInfo CertInfo, err error) {
+func LoadConfig(configFilePath string) (config EnterpriseCertificateConfig, err error) {
 	jsonFile, err := os.Open(configFilePath)
 	if err != nil {
-		return CertInfo{}, err
+		return EnterpriseCertificateConfig{}, err
 	}
 
 	byteValue, err := ioutil.ReadAll(jsonFile)
 	if err != nil {
-		return CertInfo{}, err
+		return EnterpriseCertificateConfig{}, err
 	}
-	var config EnterpriseCertificateConfig
+
+	var config map[string]interface{}
+	err = json.Unmarshal(byteValue, &config)
+
+	if err != nil {
+		return EnterpriseCertificateConfig{}, err
+	}
+
+	for -, value := range configs[configsKey].([]interface{}) {
+		if v, ok := value.(map[string]interface{})[winMyStoreKey]; ok {
+			b, err := json.Marshal(v)
+
+			if err != nil {
+				return EnterpriseCertificateConfig{}, err
+			}
+
+			var certInfo CertInfo
+			err := json.Unmarshal(b, &certInfo)
+			if err != nil {
+				return EnterpriseCertificateConfig{}, err
+			}
+			return EnterpriseCertificateConfig{certInfo}, nil
+		}
+	}
+
 	err = json.Unmarshal(byteValue, &config)
 	if err != nil {
-		return CertInfo{}, err
+		return EnterpriseCertificateConfig{}, err
 	}
-	return config.CertInfo, nil
 
+	return EnterpriseCertificateConfig{}, nil
 }

@@ -5,7 +5,7 @@ import (
 )
 
 func TestLoadSignerBinaryPath(t *testing.T) {
-	path, err := LoadSignerBinaryPath("./test_data/enterprise_certificate_config.json")
+	path, err := LoadSignerBinaryPath("./test_data/certificate_config.json")
 	if err != nil {
 		t.Errorf("LoadSignerBinaryPath error: %q", err)
 	}

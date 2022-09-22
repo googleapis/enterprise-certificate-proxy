@@ -5,7 +5,7 @@ import (
 )
 
 func TestLoadConfig(t *testing.T) {
-	config, err := LoadConfig("./test_data/enterprise_certificate_config.json")
+	config, err := LoadConfig("./test_data/certificate_config.json")
 	if err != nil {
 		t.Fatalf("LoadConfig error: %v", err)
 	}
@@ -18,13 +18,13 @@ func TestLoadConfig(t *testing.T) {
 		t.Errorf("Expected label is %v, got: %v", want, config.CertInfo.Label)
 	}
 	want = "pkcs11_module.so"
-	if config.Libs.PKCS11Module != want {
-		t.Errorf("Expected pkcs11_module is %v, got: %v", want, config.Libs.PKCS11Module)
+	if config.CertInfo.PKCS11Module != want {
+		t.Errorf("Expected pkcs11_module is %v, got: %v", want, config.CertInfo.PKCS11Module)
 	}
 }
 
 func TestLoadConfigMissing(t *testing.T) {
-	_, err := LoadConfig("./test_data/enterprise_certificate_config_missing.json")
+	_, err := LoadConfig("./test_data/certificate_config_missing.json")
 	if err == nil {
 		t.Error("Expected error but got nil")
 	}

@@ -1,0 +1,10 @@
+{
+  "cert_configs": [
+    {
+      "macos_keychain": {
+        "issuer": "Google Endpoint Verification"
+      }
+    }
+  ]
+}
+
