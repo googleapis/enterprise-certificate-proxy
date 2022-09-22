@@ -37,7 +37,8 @@ func LoadConfig(configFilePath string) (config EnterpriseCertificateConfig, err 
 	var ecpConfig EnterpriseCertificateConfig
 	err = json.Unmarshal(byteValue, &ecpConfig)
 
-	if err != nil { return EnterpriseCertificateConfig{}, err
+	if err != nil {
+		return EnterpriseCertificateConfig{}, err
 	}
 
 	return ecpConfig, nil

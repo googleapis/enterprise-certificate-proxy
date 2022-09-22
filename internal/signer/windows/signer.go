@@ -83,7 +83,7 @@ func main() {
 	config, err := util.LoadConfig(configFilePath)
 
 	enterpriseCertSigner := new(EnterpriseCertSigner)
-	enterpriseCertSigner.key, err = ncrypt.Cred(config.CertInfo.Issuer, config.CertInfo.Store, config.CertInfo.Provider)
+	enterpriseCertSigner.key, err = ncrypt.Cred(config.CertConfigs.WindowsMyStoreConfig.Issuer, config.CertConfigs.WindowsMyStoreConfig.Store, config.CertConfigs.WindowsMyStoreConfig.Provider)
 	if err != nil {
 		log.Fatalf("Failed to initialize enterprise cert signer using ncrypt: %v", err)
 	}
