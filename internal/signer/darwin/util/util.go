@@ -7,8 +7,8 @@ import (
 	"os"
 )
 
-const configsKey := "cert_configs"
-const macosKey := "macos_keychain"
+const configsKey = "cert_configs"
+const macosKey = "macos_keychain"
 
 // EnterpriseCertificateConfig contains parameters for initializing signer.
 type EnterpriseCertificateConfig struct {

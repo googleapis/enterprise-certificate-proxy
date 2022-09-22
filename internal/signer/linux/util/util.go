@@ -31,7 +31,7 @@ type EnterpriseCertificateConfig struct {
 type CertInfo struct {
 	Slot  string `json:"slot"`  // The hexadecimal representation of the uint36 slot ID. (ex:0x1739427)
 	Label string `json:"label"` // The token label (ex: gecc)
-	PKCS11Module string `json:"pkcs11_module"` // The path to the pkcs11 module (shared lib)
+	PKCS11Module string `json:"module_path"` // The path to the pkcs11 module (shared lib)
 }
 
 // LoadConfig retrieves the ECP config file.
