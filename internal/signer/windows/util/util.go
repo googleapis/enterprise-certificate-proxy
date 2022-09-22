@@ -7,16 +7,18 @@ import (
 	"os"
 )
 
-const configsKey = "cert_configs"
-const winMyStoreKey = "windows_my_store"
-
 // EnterpriseCertificateConfig contains parameters for initializing signer.
 type EnterpriseCertificateConfig struct {
-	CertInfo CertInfo
+	CertConfigs CertConfigs `json:"cert_configs"`
 }
 
-// CertInfo contains parameters describing the certificate to use.
-type CertInfo struct {
+// Container for various ECP Configs.
+type CertConfigs struct {
+	WindowsMyStoreConfig WindowsMyStoreConfig `json:"windows_my_store"`
+}
+
+// WindowsMyStoreConfig contains parameters describing the certificate to use.
+type WindowsMyStoreConfig struct {
 	Issuer   string `json:"issuer"`
 	Store    string `json:"store"`
 	Provider string `json:"provider"`
@@ -34,29 +36,11 @@ func LoadConfig(configFilePath string) (config EnterpriseCertificateConfig, err 
 		return EnterpriseCertificateConfig{}, err
 	}
 
-	var ecpConfig map[string]interface{}
+	var ecpConfig EnterpriseCertificateConfig
 	err = json.Unmarshal(byteValue, &ecpConfig)
 
-	if err != nil {
-		return EnterpriseCertificateConfig{}, err
+	if err != nil { return EnterpriseCertificateConfig{}, err
 	}
 
-	for _, value := range ecpConfig[configsKey].([]interface{}) {
-		if v, ok := value.(map[string]interface{})[winMyStoreKey]; ok {
-			b, err := json.Marshal(v)
-
-			if err != nil {
-				return EnterpriseCertificateConfig{}, err
-			}
-
-			var certInfo CertInfo
-			err = json.Unmarshal(b, &certInfo)
-			if err != nil {
-				return EnterpriseCertificateConfig{}, err
-			}
-			return EnterpriseCertificateConfig{certInfo}, nil
-		}
-	}
-
-	return EnterpriseCertificateConfig{}, nil
+	return ecpConfig, nil
 }
