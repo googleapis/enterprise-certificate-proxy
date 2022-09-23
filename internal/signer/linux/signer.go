@@ -82,7 +82,7 @@ func main() {
 	configFilePath := os.Args[1]
 	config, err := util.LoadConfig(configFilePath)
 	enterpriseCertSigner := new(EnterpriseCertSigner)
-	enterpriseCertSigner.key, err = util.Cred(config.Libs.PKCS11Module, config.CertInfo.Slot, config.CertInfo.Label)
+	enterpriseCertSigner.key, err = util.Cred(config.CertConfigs.PKCS11.PKCS11Module, config.CertConfigs.PKCS11.Slot, config.CertConfigs.PKCS11.Label)
 	if err != nil {
 		log.Fatalf("Failed to initialize enterprise cert signer using pkcs11: %v", err)
 	}

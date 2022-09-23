@@ -45,14 +45,14 @@ func getCertPem(configFilePath string) []byte {
 	return certChainPem
 }
 
-//export GetCertPemForPython
-//
 // GetCertPemForPython reads the contents of the certificate specified by configFilePath,
 // storing the result inside a certHolder byte array of size certHolderLen.
 //
 // We must call it twice to get the cert. First time use nil for certHolder to get
 // the cert length. Second time we pre-create an array in Python of the cert length and
 // call this function again to load the cert into the array.
+//
+//export GetCertPemForPython
 func GetCertPemForPython(configFilePath *C.char, certHolder *byte, certHolderLen int) int {
 	pemBytes := getCertPem(C.GoString(configFilePath))
 	if certHolder != nil {
@@ -62,10 +62,10 @@ func GetCertPemForPython(configFilePath *C.char, certHolder *byte, certHolderLen
 	return len(pemBytes)
 }
 
-//export SignForPython
-//
 // SignForPython signs a message digest of length digestLen using a certificate private key
 // specified by configFilePath, storing the result inside a sigHolder byte array of size sigHolderLen.
+//
+//export SignForPython
 func SignForPython(configFilePath *C.char, digest *byte, digestLen int, sigHolder *byte, sigHolderLen int) int {
 	// First create a handle around the specified certificate and private key.
 	key, err := client.Cred(C.GoString(configFilePath))

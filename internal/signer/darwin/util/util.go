@@ -9,30 +9,34 @@ import (
 
 // EnterpriseCertificateConfig contains parameters for initializing signer.
 type EnterpriseCertificateConfig struct {
-	CertInfo CertInfo `json:"cert_info"`
+	CertConfigs CertConfigs `json:"cert_configs"`
 }
 
-// CertInfo contains parameters describing the certificate to use.
-type CertInfo struct {
+// Container for various ECP Configs.
+type CertConfigs struct {
+	MacOSKeychain MacOSKeychain `json:"macos_keychain"`
+}
+
+// MacOSKeychain contains parameters describing the certificate to use.
+type MacOSKeychain struct {
 	Issuer string `json:"issuer"`
 }
 
-// LoadCertInfo retrieves the certificate info from the config file.
-func LoadCertInfo(configFilePath string) (certInfo CertInfo, err error) {
+// LoadConfig retrieves the ECP config file.
+func LoadConfig(configFilePath string) (config EnterpriseCertificateConfig, err error) {
 	jsonFile, err := os.Open(configFilePath)
 	if err != nil {
-		return CertInfo{}, err
+		return EnterpriseCertificateConfig{}, err
 	}
 
 	byteValue, err := ioutil.ReadAll(jsonFile)
 	if err != nil {
-		return CertInfo{}, err
+		return EnterpriseCertificateConfig{}, err
 	}
-	var config EnterpriseCertificateConfig
 	err = json.Unmarshal(byteValue, &config)
 	if err != nil {
-		return CertInfo{}, err
+		return EnterpriseCertificateConfig{}, err
 	}
-	return config.CertInfo, nil
+	return config, nil
 
 }

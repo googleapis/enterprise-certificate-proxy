@@ -14,7 +14,7 @@ import (
 )
 
 func TestClient_Cred_Success(t *testing.T) {
-	_, err := Cred("testdata/enterprise_certificate_config.json")
+	_, err := Cred("testdata/certificate_config.json")
 	if err != nil {
 		t.Errorf("Cred: got %v, want nil err", err)
 	}
@@ -28,7 +28,7 @@ func TestClient_Cred_ConfigMissing(t *testing.T) {
 }
 
 func TestClient_Public(t *testing.T) {
-	key, err := Cred("testdata/enterprise_certificate_config.json")
+	key, err := Cred("testdata/certificate_config.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestClient_Public(t *testing.T) {
 }
 
 func TestClient_CertificateChain(t *testing.T) {
-	key, err := Cred("testdata/enterprise_certificate_config.json")
+	key, err := Cred("testdata/certificate_config.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestClient_CertificateChain(t *testing.T) {
 }
 
 func TestClient_Sign(t *testing.T) {
-	key, err := Cred("testdata/enterprise_certificate_config.json")
+	key, err := Cred("testdata/certificate_config.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestClient_Sign(t *testing.T) {
 }
 
 func TestClient_Sign_HashSizeMismatch(t *testing.T) {
-	key, err := Cred("testdata/enterprise_certificate_config.json")
+	key, err := Cred("testdata/certificate_config.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestClient_Sign_HashSizeMismatch(t *testing.T) {
 }
 
 func TestClient_Close(t *testing.T) {
-	key, err := Cred("testdata/enterprise_certificate_config.json")
+	key, err := Cred("testdata/certificate_config.json")
 	if err != nil {
 		t.Fatal(err)
 	}

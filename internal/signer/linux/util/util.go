@@ -21,19 +21,19 @@ func ParseHexString(str string) (i uint32, err error) {
 
 // EnterpriseCertificateConfig contains parameters for initializing signer.
 type EnterpriseCertificateConfig struct {
-	CertInfo CertInfo `json:"cert_info"`
-	Libs     Libs     `json:"libs"`
+	CertConfigs CertConfigs `json:"cert_configs"`
 }
 
-// CertInfo contains parameters describing the certificate to use.
-type CertInfo struct {
-	Slot  string `json:"slot"`  // The hexadecimal representation of the uint36 slot ID. (ex:0x1739427)
-	Label string `json:"label"` // The token label (ex: gecc)
+// Container for various ECP Configs.
+type CertConfigs struct {
+	PKCS11 PKCS11 `json:"pkcs11"`
 }
 
-// Libs contains the path to helper libs
-type Libs struct {
-	PKCS11Module string `json:"pkcs11_module"` // The path to the pkcs11 module (shared lib)
+// PKCS11 contains parameters describing the certificate to use.
+type PKCS11 struct {
+	Slot         string `json:"slot"`   // The hexadecimal representation of the uint36 slot ID. (ex:0x1739427)
+	Label        string `json:"label"`  // The token label (ex: gecc)
+	PKCS11Module string `json:"module"` // The path to the pkcs11 module (shared lib)
 }
 
 // LoadConfig retrieves the ECP config file.
