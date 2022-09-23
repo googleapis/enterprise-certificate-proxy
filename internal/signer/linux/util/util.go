@@ -26,14 +26,14 @@ type EnterpriseCertificateConfig struct {
 
 // Container for various ECP Configs.
 type CertConfigs struct {
-	Pkcs11Config Pkcs11Config `json:"pkcs11"`
+	PKCS11 PKCS11 `json:"pkcs11"`
 }
 
-// Pkcs11Config contains parameters describing the certificate to use.
-type Pkcs11Config struct {
-	Slot         string `json:"slot"`        // The hexadecimal representation of the uint36 slot ID. (ex:0x1739427)
-	Label        string `json:"label"`       // The token label (ex: gecc)
-	PKCS11Module string `json:"module_path"` // The path to the pkcs11 module (shared lib)
+// PKCS11 contains parameters describing the certificate to use.
+type PKCS11 struct {
+	Slot         string `json:"slot"`   // The hexadecimal representation of the uint36 slot ID. (ex:0x1739427)
+	Label        string `json:"label"`  // The token label (ex: gecc)
+	PKCS11Module string `json:"module"` // The path to the pkcs11 module (shared lib)
 }
 
 // LoadConfig retrieves the ECP config file.
@@ -47,12 +47,10 @@ func LoadConfig(configFilePath string) (config EnterpriseCertificateConfig, err 
 	if err != nil {
 		return EnterpriseCertificateConfig{}, err
 	}
-
-	var ecpConfig EnterpriseCertificateConfig
-	err = json.Unmarshal(byteValue, &ecpConfig)
-
-	if err != nil { return EnterpriseCertificateConfig{}, err
+	err = json.Unmarshal(byteValue, &config)
+	if err != nil {
+		return EnterpriseCertificateConfig{}, err
 	}
+	return config, nil
 
-	return ecpConfig, nil
 }

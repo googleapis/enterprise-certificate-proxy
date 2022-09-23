@@ -3,7 +3,7 @@
     "pkcs11": {
       "slot": "0x1739427",
       "label": "gecc",
-      "module_path": "pkcs11_module.so"
+      "module": "pkcs11_module.so"
     }
   }
 }

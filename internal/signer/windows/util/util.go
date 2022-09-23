@@ -14,11 +14,11 @@ type EnterpriseCertificateConfig struct {
 
 // Container for various ECP Configs.
 type CertConfigs struct {
-	WindowsMyStoreConfig WindowsMyStoreConfig `json:"windows_my_store"`
+	WindowsStore WindowsStore `json:"windows_store"`
 }
 
-// WindowsMyStoreConfig contains parameters describing the certificate to use.
-type WindowsMyStoreConfig struct {
+// WindowsStore contains parameters describing the certificate to use.
+type WindowsStore struct {
 	Issuer   string `json:"issuer"`
 	Store    string `json:"store"`
 	Provider string `json:"provider"`
@@ -35,13 +35,10 @@ func LoadConfig(configFilePath string) (config EnterpriseCertificateConfig, err 
 	if err != nil {
 		return EnterpriseCertificateConfig{}, err
 	}
-
-	var ecpConfig EnterpriseCertificateConfig
-	err = json.Unmarshal(byteValue, &ecpConfig)
-
+	err = json.Unmarshal(byteValue, &config)
 	if err != nil {
 		return EnterpriseCertificateConfig{}, err
 	}
+	return config, nil
 
-	return ecpConfig, nil
 }

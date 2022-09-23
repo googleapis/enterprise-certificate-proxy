@@ -10,16 +10,16 @@ func TestLoadConfig(t *testing.T) {
 		t.Fatalf("LoadConfig error: %v", err)
 	}
 	want := "0x1739427"
-	if config.CertConfigs.Pkcs11Config.Slot != want {
-		t.Errorf("Expected slot is %v, got: %v", want, config.CertConfigs.Pkcs11Config.Slot)
+	if config.CertConfigs.PKCS11.Slot != want {
+		t.Errorf("Expected slot is %v, got: %v", want, config.CertConfigs.PKCS11.Slot)
 	}
 	want = "gecc"
-	if config.CertConfigs.Pkcs11Config.Label != want {
-		t.Errorf("Expected label is %v, got: %v", want, config.CertConfigs.Pkcs11Config.Label)
+	if config.CertConfigs.PKCS11.Label != want {
+		t.Errorf("Expected label is %v, got: %v", want, config.CertConfigs.PKCS11.Label)
 	}
 	want = "pkcs11_module.so"
-	if config.CertConfigs.Pkcs11Config.PKCS11Module != want {
-		t.Errorf("Expected pkcs11_module is %v, got: %v", want, config.CertConfigs.Pkcs11Config.PKCS11Module)
+	if config.CertConfigs.PKCS11.PKCS11Module != want {
+		t.Errorf("Expected pkcs11_module is %v, got: %v", want, config.CertConfigs.PKCS11.PKCS11Module)
 	}
 }
 

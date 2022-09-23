@@ -20,7 +20,7 @@ type EnterpriseCertificateConfig struct {
 
 // Libs specifies the locations of helper libraries.
 type Libs struct {
-	SignerBinary string `json:"ecp"`
+	ECP string `json:"ecp"`
 }
 
 // LoadSignerBinaryPath retrieves the path of the signer binary from the config file.
@@ -39,7 +39,7 @@ func LoadSignerBinaryPath(configFilePath string) (path string, err error) {
 	if err != nil {
 		return "", err
 	}
-	signerBinaryPath := config.Libs.SignerBinary
+	signerBinaryPath := config.Libs.ECP
 	if signerBinaryPath == "" {
 		return "", errors.New("signer binary path is missing")
 	}

@@ -14,11 +14,11 @@ type EnterpriseCertificateConfig struct {
 
 // Container for various ECP Configs.
 type CertConfigs struct {
-	MacOSKeychainConfig MacOSKeychainConfig `json:"macos_keychain"`
+	MacOSKeychain MacOSKeychain `json:"macos_keychain"`
 }
 
-// MacOSKeychainConfig contains parameters describing the certificate to use.
-type MacOSKeychainConfig struct {
+// MacOSKeychain contains parameters describing the certificate to use.
+type MacOSKeychain struct {
 	Issuer string `json:"issuer"`
 }
 
@@ -33,13 +33,10 @@ func LoadConfig(configFilePath string) (config EnterpriseCertificateConfig, err 
 	if err != nil {
 		return EnterpriseCertificateConfig{}, err
 	}
-
-	var ecpConfig EnterpriseCertificateConfig
-	err = json.Unmarshal(byteValue, &ecpConfig)
-
+	err = json.Unmarshal(byteValue, &config)
 	if err != nil {
 		return EnterpriseCertificateConfig{}, err
 	}
+	return config, nil
 
-	return ecpConfig, nil
 }

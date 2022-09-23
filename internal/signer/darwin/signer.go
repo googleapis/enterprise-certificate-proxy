@@ -83,7 +83,7 @@ func main() {
 	config, err := util.LoadConfig(configFilePath)
 
 	enterpriseCertSigner := new(EnterpriseCertSigner)
-	enterpriseCertSigner.key, err = keychain.Cred(config.CertConfigs.MacOSKeychainConfig.Issuer)
+	enterpriseCertSigner.key, err = keychain.Cred(config.CertConfigs.MacOSKeychain.Issuer)
 	if err != nil {
 		log.Fatalf("Failed to initialize enterprise cert signer using keychain: %v", err)
 	}

@@ -10,7 +10,7 @@ func TestLoadConfig(t *testing.T) {
 		t.Errorf("LoadConfig error: %q", err)
 	}
 	want := "Google Endpoint Verification"
-	if config.CertConfigs.MacOSKeychainConfig.Issuer != want {
-		t.Errorf("Expected issuer is %q, got: %q", want, config.CertConfigs.MacOSKeychainConfig.Issuer)
+	if config.CertConfigs.MacOSKeychain.Issuer != want {
+		t.Errorf("Expected issuer is %q, got: %q", want, config.CertConfigs.MacOSKeychain.Issuer)
 	}
 }
