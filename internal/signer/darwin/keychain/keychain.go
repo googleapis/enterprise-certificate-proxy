@@ -83,7 +83,7 @@ func cfErrorFromRef(cfErr C.CFErrorRef) *cfError {
 		return nil
 	}
 	c := &cfError{e: cfErr}
-	runtime.SetFinalizer(c, func(x any) {
+	runtime.SetFinalizer(c, func(x interface{}) {
 		C.CFRelease(C.CFTypeRef(x.(*cfError).e))
 	})
 	return c
@@ -142,7 +142,7 @@ func newKey(privateKeyRef C.SecKeyRef, certs []*x509.Certificate) (*Key, error) 
 	// This struct now owns the key reference. Retain now and release on
 	// finalise in case the credential gets forgotten about.
 	C.CFRetain(C.CFTypeRef(privateKeyRef))
-	runtime.SetFinalizer(k, func(x any) {
+	runtime.SetFinalizer(k, func(x interface{}) {
 		x.(*Key).Close()
 	})
 	return k, nil
