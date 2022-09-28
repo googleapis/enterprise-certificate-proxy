@@ -94,10 +94,10 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
 {
   "cert_configs": {
     "pkcs11": {
-      "token_label": "YOUR_TOKEN_LABEL",
-      "key_label": "YOUR_KEY_LABEL",
+      "label": "YOUR_TOKEN_LABEL",
       "user_pin": "YOUR_PIN",
-      "module_path": "The PKCS #11 Module library",
+      "slot": "YOUR_SLOT",
+      "module": "The PKCS #11 module library file path",
     },
   },
   "libs": {
