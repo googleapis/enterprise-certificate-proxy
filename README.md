@@ -132,6 +132,7 @@ Contributions to this library are always welcome and highly encouraged. See the 
 Apache - See [LICENSE](license) for more information.
 
 [cba]: https://cloud.google.com/beyondcorp-enterprise/docs/securing-resources-with-certificate-based-access
+[clientcert]: https://en.wikipedia.org/wiki/Client_certificate
 [openssl]: https://wiki.openssl.org/index.php/Binaries
 [keystore]: https://en.wikipedia.org/wiki/Key_management
 [cloudsdk]: https://cloud.google.com/sdk
