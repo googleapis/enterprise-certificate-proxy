@@ -45,7 +45,7 @@ Before using ECP with your application/client, you should follow the instruction
    1. Alternatively you can put the JSON in the location of your choice and set the path to it using `$ gcloud config set context_aware/enterprise_certificate_config_file_path "<json file path>"`.
    1. Another approach for setting the JSON file location is setting the location with the `GOOGLE_API_CERTIFICATE_CONFIG` environment variable.
 
-1. Update the `certificate_config.json` file with details about the certificate (See [Configuration](#configutation) section for details.)
+1. Update the `certificate_config.json` file with details about the certificate (See [Configuration](#certificate-configutation) section for details.)
 
 1. Enable usage of client certificates through gcloud CLI config command:
 ```
