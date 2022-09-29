@@ -1,5 +1,11 @@
 # Google Proxies for Enterprise Certificates (Preview)
 
+## Certificate-based-access
+
+If you use [certificate-based access][cba] to protect your Google Cloud resources, the end user [device certificate][clientcert] is one of the credentials that is verified before access to a resource is granted. You can configure Google Cloud to use the device certificates in your operating system key store when verifying access to a resource from the gcloud CLI or Terraform by using the enterprise certificates feature.
+
+## Google Enterprise Certificate Proxies (ECP)
+
 Google Enterprise Certificate Proxies (ECP) are part of the [Google Cloud Zero Trust architecture][zerotrust] that enables mutual authentication with [client-side certificates][clientcert]. This repository contains a set of proxies/modules that can be used by clients or toolings to interact with certificates that are stored in [protected key storage systems][keystore].
 
 To interact the client certificates, application code should not need to use most of these proxies within this repository directly. Instead, the application should leverage the clients and toolings provided by Google such as [Cloud SDK](https://cloud.google.com/sdk) to have a more convenient developer experience.
@@ -14,15 +20,13 @@ The following platforms/keystores are supported by ECP:
 - Windows: __MyStore__
 - Linux: __PKCS#11__
 
-## Quick Start Guide
-
-### Prerequisites
+## Prerequisites
 
 Before using ECP with your application/client, you should follow the instructions [here](enterprisecert) to configure your enterprise certificate policies with Access Context Manager. 
 
-### Installation
+### Quick Start
 
-1. Install Openssl
+1. Install [Openssl][openssl] and then add the OpenSSL installation path to your system path:
 `brew install openssl@1.1`
 
 1. Install gcloud CLI (Cloud SDK) at: https://cloud.google.com/sdk/docs/install
@@ -48,7 +52,9 @@ Before using ECP with your application/client, you should follow the instruction
 gcloud config set context_aware/use_client_certificate true
 ```
 
-### Configuration
+1. You can now use gcloud to access GCP resources with mTLS.
+
+### Certificate Configuration
 
 ECP relies on the `certificate_config.json` file to read all the metadata information of locating the certificate. The contents of this JSON file looks like the following:
 
@@ -125,8 +131,8 @@ Contributions to this library are always welcome and highly encouraged. See the 
 
 Apache - See [LICENSE](license) for more information.
 
-[zerotrust]: https://cloud.google.com/beyondcorp
-[clientcert]: https://en.wikipedia.org/wiki/Client_certificate
+[cba]: https://cloud.google.com/beyondcorp-enterprise/docs/securing-resources-with-certificate-based-access
+[openssl]: https://wiki.openssl.org/index.php/Binaries
 [keystore]: https://en.wikipedia.org/wiki/Key_management
 [cloudsdk]: https://cloud.google.com/sdk
 [contributing]: ./CONTRIBUTING.md
