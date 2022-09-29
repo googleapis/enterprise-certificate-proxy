@@ -30,20 +30,16 @@ Before using ECP with your application/client, you should follow the instruction
 1. Download the ECP binary based on your OS from the latest [Github release](https://github.com/googleapis/enterprise-certificate-proxy/releases).
 
 1. Unzip the downloaded zip and move all the binaries into the following directory:
-```
-<gcloud-installation-path>/google-cloud-sdk/bin/ecp/
-```
+   1. Windows: `%AppData%/gcloud/enterprise_cert`.
+   1. Linux/MacOS: `~/.config/gcloud/enterprise_cert`.
 
 1. If using gcloud’s bundled Python, skip to the next step. If not, install pyopenssl==22.0.0 and cryptography==36.0.2
-```
-pip install cryptography==36.0.2
-pip install pyopenssl==22.0.0
-```
+   1. pip install cryptography==36.0.2
+   1. pip install pyopenssl==22.0.0
 
-1. Create a new JSON file at `.config/gcloud/certificate_config.json` or you can put the json in the location of your choice and set the path to it using:
-```
-gcloud config set context_aware/auto_discovery_file_path "<json file path>"
-```
+1. Create a new JSON file at `.config/gcloud/certificate_config.json`. 
+   1. Alternatively you can put the JSON in the location of your choice and set the path to it using `$ gcloud config set context_aware/enterprise_certificate_config_file_path "<json file path>"`.
+   1. Another approach for setting the JSON file location is setting the location with the `GOOGLE_API_CERTIFICATE_CONFIG` environment variable.
 
 1. Update the `certificate_config.json` file with details about the certificate (See [Configuration](#configutation) section for details.)
 
@@ -66,8 +62,9 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
     },
   },
   "libs": {
-      "ecp_signer": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer",
-      "ecp_client_library": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer.dylib", 
+      "ecp": "~/.config/gcloud/enterprise_cert/ecp",
+      "ecp_client": "~/.config/gcloud/enterprise_cert/libecp.dylib",
+      "tls_offload": "~/.config/gcloud/enterprise_cert/libtls_offload.dylib",
   },
   "version": 1,
 }
@@ -84,8 +81,9 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
     },
   },
   "libs": {
-      "ecp_signer": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer",
-      "ecp_client_library": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer.dylib", 
+      "ecp": "%AppData%/gcloud/enterprise_cert/ecp.exe",
+      "ecp_client": "%AppData%/gcloud/enterprise_cert/libecp.dll",
+      "tls_offload": "%AppData%/gcloud/enterprise_cert/libtls_offload.dll",
   },
   "version": 1,
 }
@@ -96,15 +94,16 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
 {
   "cert_configs": {
     "pkcs11": {
-      "token_label": "YOUR_TOKEN_LABEL",
-      "key_label": "YOUR_KEY_LABEL",
+      "label": "YOUR_TOKEN_LABEL",
       "user_pin": "YOUR_PIN",
+      "slot": "YOUR_SLOT",
+      "module": "The PKCS #11 module library file path",
     },
   },
   "libs": {
-    "ecp_signer": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer",
-    "ecp_client_library": "<gcloud-installation-path>/google-cloud-sdk/bin/ecp/Signer.dylib", 
-    "pkcs11_module": "/usr/lib/x86_64-linux-gnu/pkcs11/libcredentialkit_pkcs11.so.0",
+      "ecp": "~/.config/gcloud/enterprise_cert/ecp",
+      "ecp_client": "~/.config/gcloud/enterprise_cert/libecp.so",
+      "tls_offload": "~/.config/gcloud/enterprise_cert/libtls_offload.so",
   },
   "version": 1,
 }
