@@ -12,7 +12,7 @@ type EnterpriseCertificateConfig struct {
 	CertConfigs CertConfigs `json:"cert_configs"`
 }
 
-// Container for various ECP Configs.
+// CertConfigs is a container for various ECP Configs.
 type CertConfigs struct {
 	WindowsStore WindowsStore `json:"windows_store"`
 }

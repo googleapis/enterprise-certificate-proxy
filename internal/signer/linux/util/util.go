@@ -24,7 +24,7 @@ type EnterpriseCertificateConfig struct {
 	CertConfigs CertConfigs `json:"cert_configs"`
 }
 
-// Container for various ECP Configs.
+// CertConfigs is a container for various ECP Configs.
 type CertConfigs struct {
 	PKCS11 PKCS11 `json:"pkcs11"`
 }
