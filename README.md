@@ -6,7 +6,7 @@ If you use [certificate-based access][cba] to protect your Google Cloud resource
 
 ## Google Enterprise Certificate Proxies (ECP)
 
-Google Enterprise Certificate Proxies (ECP) are part of the [Google Cloud Zero Trust architecture][zerotrust] that enables mutual authentication with [client-side certificates][clientcert]. This repository contains a set of proxies/modules that can be used by clients or toolings to interact with certificates that are stored in [protected key storage systems][keystore].
+Google Enterprise Certificate Proxies (ECP) are part of the [Google Cloud Zero Trust architecture](zerotrust) that enables mutual authentication with [client-side certificates][clientcert]. This repository contains a set of proxies/modules that can be used by clients or toolings to interact with certificates that are stored in [protected key storage systems][keystore].
 
 To interact the client certificates, application code should not need to use most of these proxies within this repository directly. Instead, the application should leverage the clients and toolings provided by Google such as [Cloud SDK](https://cloud.google.com/sdk) to have a more convenient developer experience.
 
