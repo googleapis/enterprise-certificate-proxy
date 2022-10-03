@@ -56,7 +56,7 @@ gcloud config set context_aware/use_client_certificate true
 
 ### Certificate Configuration
 
-ECP relies on the `certificate_config.json` file to read all the metadata information of locating the certificate. The contents of this JSON file looks like the following:
+ECP relies on the `certificate_config.json` file to read all the metadata information for locating the certificate. The contents of this JSON file look like the following:
 
 #### MacOS (Keychain)
 
@@ -80,7 +80,7 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
 ```json
 {
   "cert_configs": {
-    "windows_my_store": {
+    "windows_store": {
       "store": "MY",
       "provider": "current_user",
       "issuer": "YOUR_CERT_ISSUER",
@@ -121,7 +121,8 @@ For amd64 MacOS, run `./build/scripts/darwin_amd64.sh`. The binaries will be pla
 
 For amd64 Linux, run `./build/scripts/linux_amd64.sh`. The binaries will be placed in `build/bin/linux_amd64` folder.
 
-For amd64 Windows, in powershell terminal, run `powershell.exe .\build\scripts\windows_amd64.sh`. The binaries will be placed in `build\bin\windows_amd64` folder.
+For amd64 Windows, in powershell terminal, run `.\build\scripts\windows_amd64.ps1`. The binaries will be placed in `build\bin\windows_amd64` folder.
+Note that gcc is required for compiling the Windows shared library. The easiest way to get gcc on Windows is to download Mingw64, and add "gcc.exe" to the powershell path.
 
 ## Contributing
 
