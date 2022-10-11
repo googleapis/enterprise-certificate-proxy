@@ -21,7 +21,6 @@ func TestLoadConfig(t *testing.T) {
 	if config.CertConfigs.PKCS11.PKCS11Module != want {
 		t.Errorf("Expected pkcs11_module is %v, got: %v", want, config.CertConfigs.PKCS11.PKCS11Module)
 	}
-
 	want = "0000"
 	if config.CertConfigs.PKCS11.UserPin != want {
 		t.Errorf("Expected user pin is %v, got: %v", want, config.CertConfigs.PKCS11.UserPin)
