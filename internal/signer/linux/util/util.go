@@ -34,6 +34,7 @@ type PKCS11 struct {
 	Slot         string `json:"slot"`   // The hexadecimal representation of the uint36 slot ID. (ex:0x1739427)
 	Label        string `json:"label"`  // The token label (ex: gecc)
 	PKCS11Module string `json:"module"` // The path to the pkcs11 module (shared lib)
+	UserPin string `json:"user_pin"` // The path to the pkcs11 module (shared lib)
 }
 
 // LoadConfig retrieves the ECP config file.
