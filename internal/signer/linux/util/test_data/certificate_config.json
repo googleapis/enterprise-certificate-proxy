@@ -3,6 +3,7 @@
     "pkcs11": {
       "slot": "0x1739427",
       "label": "gecc",
+      "user_pin": "0000",
       "module": "pkcs11_module.so"
     }
   }

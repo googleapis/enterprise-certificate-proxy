@@ -12,7 +12,7 @@ import (
 
 // Cred returns a Key wrapping the first valid certificate in the pkcs11 module
 // matching a given slot and label.
-func Cred(pkcs11Module string, slotUint32Str string, label string) (*Key, error) {
+func Cred(pkcs11Module string, slotUint32Str string, label string, userPin string) (*Key, error) {
 	module, err := pkcs11.Open(pkcs11Module)
 	if err != nil {
 		return nil, err
@@ -21,7 +21,7 @@ func Cred(pkcs11Module string, slotUint32Str string, label string) (*Key, error)
 	if err != nil {
 		return nil, err
 	}
-	kslot, err := module.Slot(slotUint32, pkcs11.Options{})
+	kslot, err := module.Slot(slotUint32, pkcs11.Options{PIN: userPin})
 
 	certs, err := kslot.Objects(pkcs11.Filter{Class: pkcs11.ClassCertificate, Label: label})
 	if err != nil {
