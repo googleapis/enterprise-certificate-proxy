@@ -24,7 +24,7 @@ type EnterpriseCertificateConfig struct {
 	CertConfigs CertConfigs `json:"cert_configs"`
 }
 
-// Container for various ECP Configs.
+// CertConfigs is a container for various ECP Configs.
 type CertConfigs struct {
 	PKCS11 PKCS11 `json:"pkcs11"`
 }
@@ -34,6 +34,7 @@ type PKCS11 struct {
 	Slot         string `json:"slot"`   // The hexadecimal representation of the uint36 slot ID. (ex:0x1739427)
 	Label        string `json:"label"`  // The token label (ex: gecc)
 	PKCS11Module string `json:"module"` // The path to the pkcs11 module (shared lib)
+	UserPin string `json:"user_pin"` // Optional user pin to unlock the PKCS #11 module. If it is not defined or empty C_Login will not be called.
 }
 
 // LoadConfig retrieves the ECP config file.
