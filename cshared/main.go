@@ -31,7 +31,7 @@ func getCertPem(configFilePath string) []byte {
 		return nil
 	}
 	defer func() {
-		if key.Close() != nil {
+		if err = key.Close(); err != nil {
 			log.Printf("Failed to clean up key. %v", err)
 		}
 	}()
@@ -74,7 +74,7 @@ func SignForPython(configFilePath *C.char, digest *byte, digestLen int, sigHolde
 		return 0
 	}
 	defer func() {
-		if key.Close() != nil {
+		if err = key.Close(); err != nil {
 			log.Printf("Failed to clean up key. %v", err)
 		}
 	}()
