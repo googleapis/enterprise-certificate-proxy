@@ -22,6 +22,9 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 		return nil, err
 	}
 	kslot, err := module.Slot(slotUint32, pkcs11.Options{PIN: userPin})
+	if err != nil {
+		return nil, err
+	}
 
 	certs, err := kslot.Objects(pkcs11.Filter{Class: pkcs11.ClassCertificate, Label: label})
 	if err != nil {
