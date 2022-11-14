@@ -79,9 +79,9 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
     }
   },
   "libs": {
-      "ecp": "~/.config/gcloud/enterprise_cert/ecp",
-      "ecp_client": "~/.config/gcloud/enterprise_cert/libecp.dylib",
-      "tls_offload": "~/.config/gcloud/enterprise_cert/libtls_offload.dylib"
+      "ecp": "[YOUR_FULL_HOME_PATH]/.config/gcloud/enterprise_cert/ecp",
+      "ecp_client": "[YOUR_FULL_HOME_PATH]/.config/gcloud/enterprise_cert/libecp.dylib",
+      "tls_offload": "[YOUR_FULL_HOME_PATH]/.config/gcloud/enterprise_cert/libtls_offload.dylib"
   },
   "version": 1
 }
@@ -118,9 +118,9 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
     }
   },
   "libs": {
-      "ecp": "~/.config/gcloud/enterprise_cert/ecp",
-      "ecp_client": "~/.config/gcloud/enterprise_cert/libecp.so",
-      "tls_offload": "~/.config/gcloud/enterprise_cert/libtls_offload.so"
+      "ecp": "[YOUR_FULL_HOME_PATH]/.config/gcloud/enterprise_cert/ecp",
+      "ecp_client": "[YOUR_FULL_HOME_PATH]/.config/gcloud/enterprise_cert/libecp.so",
+      "tls_offload": "[YOUR_FULL_HOME_PATH]/.config/gcloud/enterprise_cert/libtls_offload.so"
   },
   "version": 1
 }
