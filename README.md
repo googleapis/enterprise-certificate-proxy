@@ -64,15 +64,15 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
 {
   "cert_configs": {
     "macos_keychain": {
-      "issuer": "YOUR_CERT_ISSUER",
-    },
+      "issuer": "YOUR_CERT_ISSUER"
+    }
   },
   "libs": {
       "ecp": "~/.config/gcloud/enterprise_cert/ecp",
       "ecp_client": "~/.config/gcloud/enterprise_cert/libecp.dylib",
-      "tls_offload": "~/.config/gcloud/enterprise_cert/libtls_offload.dylib",
+      "tls_offload": "~/.config/gcloud/enterprise_cert/libtls_offload.dylib"
   },
-  "version": 1,
+  "version": 1
 }
 ```
 
@@ -83,15 +83,15 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
     "windows_store": {
       "store": "MY",
       "provider": "current_user",
-      "issuer": "YOUR_CERT_ISSUER",
-    },
+      "issuer": "YOUR_CERT_ISSUER"
+    }
   },
   "libs": {
       "ecp": "%AppData%/gcloud/enterprise_cert/ecp.exe",
       "ecp_client": "%AppData%/gcloud/enterprise_cert/libecp.dll",
-      "tls_offload": "%AppData%/gcloud/enterprise_cert/libtls_offload.dll",
+      "tls_offload": "%AppData%/gcloud/enterprise_cert/libtls_offload.dll"
   },
-  "version": 1,
+  "version": 1
 }
 ```
 
@@ -103,15 +103,15 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
       "label": "YOUR_TOKEN_LABEL",
       "user_pin": "YOUR_PIN",
       "slot": "YOUR_SLOT",
-      "module": "The PKCS #11 module library file path",
-    },
+      "module": "The PKCS #11 module library file path"
+    }
   },
   "libs": {
       "ecp": "~/.config/gcloud/enterprise_cert/ecp",
       "ecp_client": "~/.config/gcloud/enterprise_cert/libecp.so",
-      "tls_offload": "~/.config/gcloud/enterprise_cert/libtls_offload.so",
+      "tls_offload": "~/.config/gcloud/enterprise_cert/libtls_offload.so"
   },
-  "version": 1,
+  "version": 1
 }
 ```
 

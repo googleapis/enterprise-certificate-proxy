@@ -72,9 +72,9 @@ func (k *Key) Close() error {
 	if err := k.cmd.Process.Kill(); err != nil {
 		return fmt.Errorf("failed to kill signer process: %w", err)
 	}
-	if err := k.cmd.Wait(); err.Error() != "signal: killed" {
-		return fmt.Errorf("signer process was not killed: %w", err)
-	}
+	// Wait for cmd to exit and release resources. Since the process is forcefully killed, this
+	// will return a non-nil error (varies by OS), which we will ignore.
+	k.cmd.Wait()
 	// The Pipes connecting the RPC client should have been closed when the signer subprocess was killed.
 	// Calling `k.client.Close()` before `k.cmd.Process.Kill()` or `k.cmd.Wait()` _will_ cause a segfault.
 	if err := k.client.Close(); err.Error() != "close |0: file already closed" {
