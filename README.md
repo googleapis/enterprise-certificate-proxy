@@ -17,7 +17,6 @@ Currently ECP is in Preview stage and all the APIs and configurations are **subj
 The following platforms/keystores are supported by ECP:
 
 - MacOS: __Keychain__
-- Windows: __MyStore__
 - Linux: __PKCS#11__
 
 ## Prerequisites
@@ -34,16 +33,28 @@ Before using ECP with your application/client, you should follow the instruction
 1. Download the ECP binary based on your OS from the latest [Github release](https://github.com/googleapis/enterprise-certificate-proxy/releases).
 
 1. Unzip the downloaded zip and move all the binaries into the following directory:
-   1. Windows: `%AppData%/gcloud/enterprise_cert`.
-   1. Linux/MacOS: `~/.config/gcloud/enterprise_cert`.
+    - Linux/MacOS: `~/.config/gcloud/enterprise_cert`
 
-1. If using gcloud’s bundled Python, skip to the next step. If not, install pyopenssl==22.0.0 and cryptography==36.0.2
-   1. pip install cryptography==36.0.2
-   1. pip install pyopenssl==22.0.0
+1. If you are on Linux, skip this step since you will be using the bundled Python by default. If you are on MacOS, you need to do the following steps:
+    - Enable gcloud virtual Python environment:
 
-1. Create a new JSON file at `.config/gcloud/certificate_config.json`. 
-   1. Alternatively you can put the JSON in the location of your choice and set the path to it using `$ gcloud config set context_aware/enterprise_certificate_config_file_path "<json file path>"`.
-   1. Another approach for setting the JSON file location is setting the location with the `GOOGLE_API_CERTIFICATE_CONFIG` environment variable.
+      `gcloud config virtualenv create`
+
+      `gcloud config virtualenv enable`
+
+    - Install dependencies for your virtual environment:
+
+      `~/.config/gcloud/virtenv/bin/python3 -m pip install cryptography==36.0.2`
+
+      `~/.config/gcloud/virtenv/bin/python3 -m pip install pyopenssl==22.0.0`
+
+1. Create a new JSON file at `.config/gcloud/certificate_config.json`:
+
+    - Alternatively you can put the JSON in the location of your choice and set the path to it using:
+
+      `$ gcloud config set context_aware/enterprise_certificate_config_file_path "<json file path>"`.
+
+    - Another approach for setting the JSON file location is setting the location with the `GOOGLE_API_CERTIFICATE_CONFIG` environment variable.
 
 1. Update the `certificate_config.json` file with details about the certificate (See [Configuration](#certificate-configutation) section for details.)
 
