@@ -79,9 +79,9 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
     }
   },
   "libs": {
-      "ecp": "[YOUR_FULL_HOME_PATH]/.config/gcloud/enterprise_cert/ecp",
-      "ecp_client": "[YOUR_FULL_HOME_PATH]/.config/gcloud/enterprise_cert/libecp.dylib",
-      "tls_offload": "[YOUR_FULL_HOME_PATH]/.config/gcloud/enterprise_cert/libtls_offload.dylib"
+      "ecp": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/bin/ecp",
+      "ecp_client": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise-certificate/libecp.dylib",
+      "tls_offload": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise-certificate/libtls_offload.dylib"
   },
   "version": 1
 }
@@ -98,9 +98,9 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
     }
   },
   "libs": {
-      "ecp": "%AppData%/gcloud/enterprise_cert/ecp.exe",
-      "ecp_client": "%AppData%/gcloud/enterprise_cert/libecp.dll",
-      "tls_offload": "%AppData%/gcloud/enterprise_cert/libtls_offload.dll"
+      "ecp": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/bin/ecp.exe",
+      "ecp_client": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise-certificate/libecp.dll",
+      "tls_offload": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise-certificate/libtls_offload.dll"
   },
   "version": 1
 }
@@ -118,9 +118,9 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
     }
   },
   "libs": {
-      "ecp": "[YOUR_FULL_HOME_PATH]/.config/gcloud/enterprise_cert/ecp",
-      "ecp_client": "[YOUR_FULL_HOME_PATH]/.config/gcloud/enterprise_cert/libecp.so",
-      "tls_offload": "[YOUR_FULL_HOME_PATH]/.config/gcloud/enterprise_cert/libtls_offload.so"
+      "ecp": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/bin/ecp",
+      "ecp_client": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise-certificate/libecp.so",
+      "tls_offload": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise-certificate//libtls_offload.so"
   },
   "version": 1
 }
