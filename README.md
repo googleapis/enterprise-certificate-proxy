@@ -126,6 +126,18 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
 }
 ```
 
+### Logging
+
+To enable logging set the "ENABLE_ENTERPRISE_CERTIFICATE_LOGS" environment
+variable.
+
+#### Example
+
+```
+export ENABLE_ENTERPRISE_CERTIFICATE_LOGS=1 # Now the
+enterprise-certificate-proxy will output logs to stdout.
+```
+
 ## Build binaries
 
 For amd64 MacOS, run `./build/scripts/darwin_amd64.sh`. The binaries will be placed in `build/bin/darwin_amd64` folder.

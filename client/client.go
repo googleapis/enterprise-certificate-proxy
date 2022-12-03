@@ -20,6 +20,7 @@ import (
 	"os/exec"
 
 	"github.com/googleapis/enterprise-certificate-proxy/client/util"
+	"github.com/googleapis/enterprise-certificate-proxy/utils"
 )
 
 const signAPI = "EnterpriseCertSigner.Sign"
@@ -105,6 +106,7 @@ func (k *Key) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (signed [
 //
 // The config file also specifies which certificate the signer should use.
 func Cred(configFilePath string) (*Key, error) {
+	utils.EnableECPLogging()
 	if configFilePath == "" {
 		configFilePath = util.GetDefaultConfigFilePath()
 	}

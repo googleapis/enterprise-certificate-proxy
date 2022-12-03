@@ -20,6 +20,8 @@ import (
 	"signer/ncrypt"
 	"signer/util"
 	"time"
+
+	"github.com/googleapis/enterprise-certificate-proxy/utils"
 )
 
 func init() {
@@ -76,6 +78,7 @@ func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
 }
 
 func main() {
+	utils.EnableECPLogging()
 	if len(os.Args) != 2 {
 		log.Fatalln("Signer is not meant to be invoked manually, exiting...")
 	}

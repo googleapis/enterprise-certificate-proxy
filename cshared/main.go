@@ -22,6 +22,7 @@ import (
 	"unsafe"
 
 	"github.com/googleapis/enterprise-certificate-proxy/client"
+	"github.com/googleapis/enterprise-certificate-proxy/utils"
 )
 
 func getCertPem(configFilePath string) []byte {
@@ -54,6 +55,7 @@ func getCertPem(configFilePath string) []byte {
 //
 //export GetCertPemForPython
 func GetCertPemForPython(configFilePath *C.char, certHolder *byte, certHolderLen int) int {
+	utils.EnableECPLogging()
 	pemBytes := getCertPem(C.GoString(configFilePath))
 	if certHolder != nil {
 		cert := unsafe.Slice(certHolder, certHolderLen)
@@ -68,6 +70,7 @@ func GetCertPemForPython(configFilePath *C.char, certHolder *byte, certHolderLen
 //export SignForPython
 func SignForPython(configFilePath *C.char, digest *byte, digestLen int, sigHolder *byte, sigHolderLen int) int {
 	// First create a handle around the specified certificate and private key.
+	utils.EnableECPLogging()
 	key, err := client.Cred(C.GoString(configFilePath))
 	if err != nil {
 		log.Printf("Could not create client using config %s: %v", C.GoString(configFilePath), err)
