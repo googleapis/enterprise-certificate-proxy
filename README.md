@@ -6,7 +6,7 @@ If you use [certificate-based access][cba] to protect your Google Cloud resource
 
 ## Google Enterprise Certificate Proxies (ECP)
 
-Google Enterprise Certificate Proxies (ECP) are part of the [Google Cloud Zero Trust architecture](zerotrust) that enables mutual authentication with [client-side certificates][clientcert]. This repository contains a set of proxies/modules that can be used by clients or toolings to interact with certificates that are stored in [protected key storage systems][keystore].
+Google Enterprise Certificate Proxies (ECP) are part of the [Google Cloud Zero Trust architecture][zerotrust] that enables mutual authentication with [client-side certificates][clientcert]. This repository contains a set of proxies/modules that can be used by clients or toolings to interact with certificates that are stored in [protected key storage systems][keystore].
 
 To interact the client certificates, application code should not need to use most of these proxies within this repository directly. Instead, the application should leverage the clients and toolings provided by Google such as [Cloud SDK](https://cloud.google.com/sdk) to have a more convenient developer experience.
 
@@ -21,7 +21,7 @@ The following platforms/keystores are supported by ECP:
 
 ## Prerequisites
 
-Before using ECP with your application/client, you should follow the instructions [here](enterprisecert) to configure your enterprise certificate policies with Access Context Manager. 
+Before using ECP with your application/client, you should follow the instructions [here][enterprisecert] to configure your enterprise certificate policies with Access Context Manager. 
 
 ### Quick Start
 
@@ -59,9 +59,9 @@ Before using ECP with your application/client, you should follow the instruction
 1. Update the `certificate_config.json` file with details about the certificate (See [Configuration](#certificate-configutation) section for details.)
 
 1. Enable usage of client certificates through gcloud CLI config command:
-```
-gcloud config set context_aware/use_client_certificate true
-```
+    ```
+    gcloud config set context_aware/use_client_certificate true
+    ```
 
 1. You can now use gcloud to access GCP resources with mTLS.
 
@@ -137,17 +137,17 @@ Note that gcc is required for compiling the Windows shared library. The easiest 
 
 ## Contributing
 
-Contributions to this library are always welcome and highly encouraged. See the [CONTRIBUTING](contributing) documentation for more information on how to get started.
+Contributions to this library are always welcome and highly encouraged. See the [CONTRIBUTING](./CONTRIBUTING.md) documentation for more information on how to get started.
 
 ## License
 
-Apache - See [LICENSE](license) for more information.
+Apache - See [LICENSE](./LICENSE) for more information.
 
 [cba]: https://cloud.google.com/beyondcorp-enterprise/docs/securing-resources-with-certificate-based-access
 [clientcert]: https://en.wikipedia.org/wiki/Client_certificate
 [openssl]: https://wiki.openssl.org/index.php/Binaries
 [keystore]: https://en.wikipedia.org/wiki/Key_management
 [cloudsdk]: https://cloud.google.com/sdk
-[contributing]: ./CONTRIBUTING.md
-[license]:./LICENSE.md
 [enterprisecert]: https://cloud.google.com/access-context-manager/docs/enterprise-certificates
+[zerotrust]: https://cloud.google.com/blog/topics/developers-practitioners/zero-trust-and-beyondcorp-google-cloud
+
