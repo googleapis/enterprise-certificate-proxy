@@ -149,3 +149,5 @@ Apache - See [LICENSE](./LICENSE) for more information.
 [keystore]: https://en.wikipedia.org/wiki/Key_management
 [cloudsdk]: https://cloud.google.com/sdk
 [enterprisecert]: https://cloud.google.com/access-context-manager/docs/enterprise-certificates
+[zerotrust]: https://cloud.google.com/blog/topics/developers-practitioners/zero-trust-and-beyondcorp-google-cloud
+
