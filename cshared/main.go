@@ -18,12 +18,24 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/pem"
+	"io/ioutil"
 	"log"
+	"os"
 	"unsafe"
 
 	"github.com/googleapis/enterprise-certificate-proxy/client"
-	"github.com/googleapis/enterprise-certificate-proxy/utils"
 )
+
+// / If ECP Logging is enabled return true
+// / Otherwise return false
+func enableECPLogging() bool {
+	if os.Getenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS") != "" {
+		return true
+	}
+
+	log.SetOutput(ioutil.Discard)
+	return false
+}
 
 func getCertPem(configFilePath string) []byte {
 	key, err := client.Cred(configFilePath)
@@ -55,7 +67,7 @@ func getCertPem(configFilePath string) []byte {
 //
 //export GetCertPemForPython
 func GetCertPemForPython(configFilePath *C.char, certHolder *byte, certHolderLen int) int {
-	utils.EnableECPLogging()
+	enableECPLogging()
 	pemBytes := getCertPem(C.GoString(configFilePath))
 	if certHolder != nil {
 		cert := unsafe.Slice(certHolder, certHolderLen)
@@ -70,7 +82,7 @@ func GetCertPemForPython(configFilePath *C.char, certHolder *byte, certHolderLen
 //export SignForPython
 func SignForPython(configFilePath *C.char, digest *byte, digestLen int, sigHolder *byte, sigHolderLen int) int {
 	// First create a handle around the specified certificate and private key.
-	utils.EnableECPLogging()
+	enableECPLogging()
 	key, err := client.Cred(C.GoString(configFilePath))
 	if err != nil {
 		log.Printf("Could not create client using config %s: %v", C.GoString(configFilePath), err)
