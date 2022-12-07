@@ -25,3 +25,11 @@ jobs:
     - name: Test
       working-directory: ./internal/signer/windows
       run: go test -v ./...
+
+    - name: Create Artifacts
+      run: .\build\scripts\windows_amd64.ps1
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: Windows Signer
+        path: .\build\bin\windows_amd64\*
