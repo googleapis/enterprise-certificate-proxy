@@ -23,8 +23,8 @@ import (
 	"time"
 )
 
-// / If ECP Logging is enabled return true
-// / Otherwise return false
+// If ECP Logging is enabled return true
+// Otherwise return false
 func enableECPLogging() bool {
 	if os.Getenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS") != "" {
 		return true
