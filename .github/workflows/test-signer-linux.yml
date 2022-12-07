@@ -31,5 +31,5 @@ jobs:
 
     - uses: actions/upload-artifact@v3
       with:
-        name: Linux Binaries
+        name: linux_amd64
         path: ./build/bin/linux_amd64/*
