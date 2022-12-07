@@ -15,6 +15,8 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"net/rpc"
 	"os"
 	"os/exec"
@@ -40,6 +42,17 @@ func (c *Connection) Close() error {
 		return rerr
 	}
 	return werr
+}
+
+// If ECP Logging is enabled return true
+// Otherwise return false
+func enableECPLogging() bool {
+	if os.Getenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS") != "" {
+		return true
+	}
+
+	log.SetOutput(ioutil.Discard)
+	return false
 }
 
 func init() {
@@ -105,6 +118,7 @@ func (k *Key) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (signed [
 //
 // The config file also specifies which certificate the signer should use.
 func Cred(configFilePath string) (*Key, error) {
+	enableECPLogging()
 	if configFilePath == "" {
 		configFilePath = util.GetDefaultConfigFilePath()
 	}

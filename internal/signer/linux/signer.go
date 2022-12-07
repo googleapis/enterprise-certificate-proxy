@@ -15,12 +15,24 @@ import (
 	"crypto/x509"
 	"encoding/gob"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/rpc"
 	"os"
 	"signer/util"
 	"time"
 )
+
+// If ECP Logging is enabled return true
+// Otherwise return false
+func enableECPLogging() bool {
+	if os.Getenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS") != "" {
+		return true
+	}
+
+	log.SetOutput(ioutil.Discard)
+	return false
+}
 
 func init() {
 	gob.Register(crypto.SHA256)
@@ -76,6 +88,7 @@ func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
 }
 
 func main() {
+	enableECPLogging()
 	if len(os.Args) != 2 {
 		log.Fatalln("Signer is not meant to be invoked manually, exiting...")
 	}
