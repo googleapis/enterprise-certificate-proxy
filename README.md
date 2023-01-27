@@ -18,37 +18,27 @@ The following platforms/keystores are supported by ECP:
 
 - MacOS: __Keychain__
 - Linux: __PKCS#11__
+- Windows: __MY__
 
 ## Prerequisites
 
-Before using ECP with your application/client, you should follow the instructions [here][enterprisecert] to configure your enterprise certificate policies with Access Context Manager. 
+Before using ECP with your application/client, you should follow the instructions [here][enterprisecert] to configure your enterprise certificate policies with Access Context Manager.
 
 ### Quick Start
 
-1. Install [Openssl][openssl] and then add the OpenSSL installation path to your system path:
-`brew install openssl@1.1`
+1. Install gcloud CLI (Cloud SDK) at: https://cloud.google.com/sdk/docs/install.
 
-1. Install gcloud CLI (Cloud SDK) at: https://cloud.google.com/sdk/docs/install
+   1. **Note:** gcloud version 416.0 or newer is required.
 
-1. Download the ECP binary based on your OS from the latest [Github release](https://github.com/googleapis/enterprise-certificate-proxy/releases).
+1. `$ gcloud components install enterprise-certificate-proxy`.
 
-1. Unzip the downloaded zip and move all the binaries into the following directory:
-    - Linux/MacOS: `~/.config/gcloud/enterprise_cert`
+1. **MacOS ONLY**
 
-1. If you are on Linux, skip this step since you will be using the bundled Python by default. If you are on MacOS, you need to do the following steps:
-    - Enable gcloud virtual Python environment:
+   1. `$ gcloud config virtualenv create`
 
-      `gcloud config virtualenv create`
+   1. `$ gcloud config virtualenv enable`
 
-      `gcloud config virtualenv enable`
-
-    - Install dependencies for your virtual environment:
-
-      `~/.config/gcloud/virtenv/bin/python3 -m pip install cryptography==36.0.2`
-
-      `~/.config/gcloud/virtenv/bin/python3 -m pip install pyopenssl==22.0.0`
-
-1. Create a new JSON file at `.config/gcloud/certificate_config.json`:
+1. Create a new JSON file at `~/.config/gcloud/certificate_config.json`:
 
     - Alternatively you can put the JSON in the location of your choice and set the path to it using:
 
@@ -80,8 +70,8 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
   },
   "libs": {
       "ecp": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/bin/ecp",
-      "ecp_client": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise-certificate/libecp.dylib",
-      "tls_offload": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise-certificate/libtls_offload.dylib"
+      "ecp_client": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise_cert/libecp.dylib",
+      "tls_offload": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise_cert/libtls_offload.dylib"
   },
   "version": 1
 }
@@ -99,8 +89,8 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
   },
   "libs": {
       "ecp": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/bin/ecp.exe",
-      "ecp_client": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise-certificate/libecp.dll",
-      "tls_offload": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise-certificate/libtls_offload.dll"
+      "ecp_client": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise_cert/libecp.dll",
+      "tls_offload": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise_cert/libtls_offload.dll"
   },
   "version": 1
 }
@@ -119,8 +109,8 @@ ECP relies on the `certificate_config.json` file to read all the metadata inform
   },
   "libs": {
       "ecp": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/bin/ecp",
-      "ecp_client": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise-certificate/libecp.so",
-      "tls_offload": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise-certificate//libtls_offload.so"
+      "ecp_client": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise_cert/libecp.so",
+      "tls_offload": "[GCLOUD-INSTALL-LOCATION]/google-cloud-sdk/platform/enterprise_cert/libtls_offload.so"
   },
   "version": 1
 }
