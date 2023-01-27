@@ -32,11 +32,11 @@ Before using ECP with your application/client, you should follow the instruction
 
 1. `$ gcloud components install enterprise-certificate-proxy`.
 
-1. **MacOS ONLY**:
+1. **MacOS ONLY**
 
-  1. `$ gcloud config virtualenv create`
+   1. `$ gcloud config virtualenv create`
 
-  1. `$ gcloud config virtualenv enable`
+   1. `$ gcloud config virtualenv enable`
 
 1. Create a new JSON file at `~/.config/gcloud/certificate_config.json`:
 
