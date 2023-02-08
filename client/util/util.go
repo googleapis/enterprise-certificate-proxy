@@ -36,10 +36,17 @@ type Libs struct {
 	ECP string `json:"ecp"`
 }
 
+// ErrConfigUnavailable is a sentinel error that indicates ECP config is unavailable,
+// possibly due to entire config missing or missing binary path.
+var ErrConfigUnavailable = errors.New("Config is unavailable")
+
 // LoadSignerBinaryPath retrieves the path of the signer binary from the config file.
 func LoadSignerBinaryPath(configFilePath string) (path string, err error) {
 	jsonFile, err := os.Open(configFilePath)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", ErrConfigUnavailable
+		}
 		return "", err
 	}
 
@@ -54,7 +61,7 @@ func LoadSignerBinaryPath(configFilePath string) (path string, err error) {
 	}
 	signerBinaryPath := config.Libs.ECP
 	if signerBinaryPath == "" {
-		return "", errors.New("signer binary path is missing")
+		return "", ErrConfigUnavailable
 	}
 	return signerBinaryPath, nil
 }
