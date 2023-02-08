@@ -22,6 +22,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -119,6 +120,10 @@ func (k *Key) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (signed [
 	return
 }
 
+// ErrCredUnavailable is a sentinel error that indicates ECP Cred is unavailable,
+// possibly due to missing config or missing binary path.
+var ErrCredUnavailable = errors.New("Cred is unavailable")
+
 // Cred spawns a signer subprocess that listens on stdin/stdout to perform certificate
 // related operations, including signing messages with the private key.
 //
@@ -133,6 +138,9 @@ func Cred(configFilePath string) (*Key, error) {
 	}
 	enterpriseCertSignerPath, err := util.LoadSignerBinaryPath(configFilePath)
 	if err != nil {
+		if errors.Is(err, util.ErrConfigUnavailable) {
+			return nil, ErrCredUnavailable
+		}
 		return nil, err
 	}
 	k := &Key{

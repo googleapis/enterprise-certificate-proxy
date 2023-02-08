@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"crypto"
 	"errors"
-	"os"
 	"testing"
 )
 
@@ -31,8 +30,15 @@ func TestClient_Cred_Success(t *testing.T) {
 
 func TestClient_Cred_ConfigMissing(t *testing.T) {
 	_, err := Cred("missing.json")
-	if got, want := err, os.ErrNotExist; !errors.Is(got, want) {
+	if got, want := err, ErrCredUnavailable; !errors.Is(got, want) {
 		t.Errorf("Cred: with missing config; got %v, want %v err", got, want)
+	}
+}
+
+func TestClient_Cred_PathMissing(t *testing.T) {
+	_, err := Cred("testdata/certificate_config_missing_path.json")
+	if got, want := err, ErrCredUnavailable; !errors.Is(got, want) {
+		t.Errorf("Cred: with missing ECP path; got %v, want %v err", got, want)
 	}
 }
 
