@@ -31,7 +31,7 @@ jobs:
       with:
         version: latest
         working-directory: ./internal/signer/windows
-        args: -E gofmt
+        args: -E gofmt --max-same-issues 0
 
     - name: Create Binaries
       run: .\build\scripts\windows_amd64.ps1
