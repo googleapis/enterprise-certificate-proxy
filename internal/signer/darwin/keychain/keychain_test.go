@@ -18,7 +18,6 @@ package keychain
 
 import (
 	"bytes"
-	"crypto"
 	"testing"
 	"unsafe"
 )
