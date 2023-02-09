@@ -59,9 +59,6 @@ const (
 )
 
 var (
-	// my is the MY system store (see https://msdn.microsoft.com/en-us/library/windows/desktop/aa376560(v=vs.85).aspx)
-	my = []uint16{'M', 'Y', 0}
-
 	null = uintptr(unsafe.Pointer(nil))
 
 	crypt32 = windows.MustLoadDLL("crypt32.dll")
@@ -94,13 +91,6 @@ func findCert(store windows.Handle, enc uint32, findFlags uint32, findType uint3
 		return nil, err
 	}
 	return (*windows.CertContext)(unsafe.Pointer(h)), nil
-}
-
-// printCertificateList prints the index and subject of certificates in a list.
-func printCertificateList(certs []*x509.Certificate) {
-	for i, xc := range certs {
-		fmt.Printf("[%d] %s\n", i, xc.Subject.ToRDNSequence())
-	}
 }
 
 // extractSimpleChain extracts the final certificate chain from a CertSimpleChain.
@@ -167,7 +157,7 @@ func findCertChain(cert *windows.CertContext) ([]*x509.Certificate, error) {
 // intendedKeyUsage wraps CertGetIntendedKeyUsage. If there are key usage bytes they will be returned,
 // otherwise 0 will be returned.
 func intendedKeyUsage(enc uint32, cert *windows.CertContext) (usage uint16) {
-	certGetIntendedKeyUsage.Call(uintptr(enc), uintptr(unsafe.Pointer(cert.CertInfo)), uintptr(unsafe.Pointer(&usage)), 2)
+	_, _, _ = certGetIntendedKeyUsage.Call(uintptr(enc), uintptr(unsafe.Pointer(cert.CertInfo)), uintptr(unsafe.Pointer(&usage)), 2)
 	return
 }
 
