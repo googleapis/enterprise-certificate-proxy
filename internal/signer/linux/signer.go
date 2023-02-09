@@ -24,7 +24,6 @@ import (
 	"crypto/x509"
 	"encoding/gob"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/rpc"
 	"os"
@@ -39,7 +38,7 @@ func enableECPLogging() bool {
 		return true
 	}
 
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	return false
 }
 
@@ -103,6 +102,10 @@ func main() {
 	}
 	configFilePath := os.Args[1]
 	config, err := util.LoadConfig(configFilePath)
+	if err != nil {
+		log.Fatalf("Failed to load enterprise cert config: %v", err)
+	}
+
 	enterpriseCertSigner := new(EnterpriseCertSigner)
 	enterpriseCertSigner.key, err = util.Cred(config.CertConfigs.PKCS11.PKCS11Module, config.CertConfigs.PKCS11.Slot, config.CertConfigs.PKCS11.Label, config.CertConfigs.PKCS11.UserPin)
 	if err != nil {
