@@ -26,6 +26,13 @@ jobs:
       working-directory: ./internal/signer/linux
       run: go test -v ./...
 
+    - name: Lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: latest
+        working-directory: ./internal/signer/linux
+        args: -E gofmt --max-same-issues 0
+
     - name: Create Binaries
       run: ./build/scripts/linux_amd64.sh
 
