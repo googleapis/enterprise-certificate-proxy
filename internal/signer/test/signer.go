@@ -20,7 +20,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/rpc"
 	"os"
@@ -83,7 +82,7 @@ func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
 func main() {
 	enterpriseCertSigner := new(EnterpriseCertSigner)
 
-	data, err := ioutil.ReadFile(os.Args[1])
+	data, err := os.ReadFile(os.Args[1])
 	if err != nil {
 		log.Fatalf("Error reading certificate: %v", err)
 	}

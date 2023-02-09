@@ -31,7 +31,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/pem"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"unsafe"
@@ -46,7 +46,7 @@ func enableECPLogging() bool {
 		return true
 	}
 
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	return false
 }
 
