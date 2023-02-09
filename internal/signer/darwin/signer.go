@@ -103,6 +103,9 @@ func main() {
 	}
 	configFilePath := os.Args[1]
 	config, err := util.LoadConfig(configFilePath)
+	if err != nil {
+		log.Fatalf("Failed to load enterprise cert config: %v", err)
+	}
 
 	enterpriseCertSigner := new(EnterpriseCertSigner)
 	enterpriseCertSigner.key, err = keychain.Cred(config.CertConfigs.MacOSKeychain.Issuer)

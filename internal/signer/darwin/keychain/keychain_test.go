@@ -23,12 +23,6 @@ import (
 	"unsafe"
 )
 
-type signerOpts crypto.Hash
-
-func (s signerOpts) HashFunc() crypto.Hash {
-	return crypto.Hash(s)
-}
-
 func TestKeychainError(t *testing.T) {
 	tests := []struct {
 		e    keychainError
