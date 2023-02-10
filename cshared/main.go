@@ -31,7 +31,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/pem"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"unsafe"
@@ -46,7 +46,7 @@ func enableECPLogging() bool {
 		return true
 	}
 
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	return false
 }
 
@@ -138,16 +138,14 @@ func SignForPython(configFilePath *C.char, digest *byte, digestLen int, sigHolde
 		log.Printf("failed to sign hash: %v", signErr)
 		return 0
 	}
-
-	// Create a Go buffer around the output buffer and copy the signature into the buffer
-	outBytes := unsafe.Slice(sigHolder, sigHolderLen)
 	if sigHolderLen < len(signature) {
 		log.Printf("The sigHolder buffer size %d is smaller than the signature size %d", sigHolderLen, len(signature))
 		return 0
 	}
-	for i := 0; i < len(signature); i++ {
-		outBytes[i] = signature[i]
-	}
+
+	// Create a Go buffer around the output buffer and copy the signature into the buffer
+	outBytes := unsafe.Slice(sigHolder, sigHolderLen)
+	copy(outBytes, signature)
 	return len(signature)
 }
 

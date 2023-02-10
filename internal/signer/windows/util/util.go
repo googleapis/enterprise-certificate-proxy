@@ -16,7 +16,7 @@ package util
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"os"
 )
 
@@ -44,7 +44,7 @@ func LoadConfig(configFilePath string) (config EnterpriseCertificateConfig, err 
 		return EnterpriseCertificateConfig{}, err
 	}
 
-	byteValue, err := ioutil.ReadAll(jsonFile)
+	byteValue, err := io.ReadAll(jsonFile)
 	if err != nil {
 		return EnterpriseCertificateConfig{}, err
 	}
