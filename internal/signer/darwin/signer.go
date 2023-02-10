@@ -23,7 +23,6 @@ import (
 	"crypto/x509"
 	"encoding/gob"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/rpc"
 	"os"
@@ -39,7 +38,7 @@ func enableECPLogging() bool {
 		return true
 	}
 
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	return false
 }
 
