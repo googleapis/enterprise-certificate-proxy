@@ -53,17 +53,6 @@ func (c *Connection) Close() error {
 	return werr
 }
 
-// If ECP Logging is enabled return true
-// Otherwise return false
-func enableECPLogging() bool {
-	if os.Getenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS") != "" {
-		return true
-	}
-
-	log.SetOutput(io.Discard)
-	return false
-}
-
 func init() {
 	gob.Register(crypto.SHA256)
 	gob.Register(&rsa.PSSOptions{})
@@ -131,7 +120,6 @@ var ErrCredUnavailable = errors.New("Cred is unavailable")
 //
 // The config file also specifies which certificate the signer should use.
 func Cred(configFilePath string) (*Key, error) {
-	enableECPLogging()
 	if configFilePath == "" {
 		configFilePath = util.GetDefaultConfigFilePath()
 	}
