@@ -119,7 +119,7 @@ func main() {
 	parentProcessId = os.Getppid()
 
 	// If the parent process dies, we should exit.
-	// https://stackoverflow.com/questions/15204162/check-if-a-process-exists-in-go-way
+	// https://stackoverflow.com/a/44367857
 	go func() {
 		for {
 			process, err := os.FindProcess(int(parentProcessId))
