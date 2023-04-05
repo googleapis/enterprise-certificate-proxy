@@ -122,7 +122,7 @@ func main() {
 	// https://stackoverflow.com/a/44367857
 	go func() {
 		for {
-			process, err := os.FindProcess(int(parentProcessId))
+			process, err := os.FindProcess(parentProcessId)
 			if err != nil {
 				log.Fatalln("Enterprise cert signer's parent process died, exiting...")
 			}
