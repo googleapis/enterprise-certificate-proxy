@@ -26,6 +26,7 @@ import (
 	"log"
 	"net/rpc"
 	"os"
+	"os/exec"
 	"signer/ncrypt"
 	"signer/util"
 	"time"
@@ -97,6 +98,7 @@ func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
 
 func main() {
 	enableECPLogging()
+	log.Println("############### in ecp")
 	if len(os.Args) != 2 {
 		log.Fatalln("Signer is not meant to be invoked manually, exiting...")
 	}
@@ -116,17 +118,24 @@ func main() {
 		log.Fatalf("Failed to register enterprise cert signer with net/rpc: %v", err)
 	}
 
+	parentProcessId := os.Getppid()
+	currentProcessId := os.Getpid()
+	out, err := exec.Command("tasklist").Output()
+	log.Println("##### running tasklist", string(out))
+	log.Println("##### parent process id: ", parentProcessId)
+	log.Println("##### process id: ", currentProcessId)
+
 	// If the parent process dies, we should exit.
 	// We can detect this by periodically checking if the PID of the parent
 	// process is 1 (https://stackoverflow.com/a/2035683).
-	go func() {
-		for {
-			if os.Getppid() == 1 {
-				log.Fatalln("Enterprise cert signer's parent process died, exiting...")
-			}
-			time.Sleep(time.Second)
-		}
-	}()
+	// go func() {
+	// 	for {
+	// 		if os.Getppid() == 1 {
+	// 			log.Fatalln("Enterprise cert signer's parent process died, exiting...")
+	// 		}
+	// 		time.Sleep(time.Second)
+	// 	}
+	// }()
 
 	rpc.ServeConn(&Connection{os.Stdin, os.Stdout})
 }
