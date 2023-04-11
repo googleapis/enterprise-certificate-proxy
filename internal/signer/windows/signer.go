@@ -116,13 +116,13 @@ func main() {
 		log.Fatalf("Failed to register enterprise cert signer with net/rpc: %v", err)
 	}
 
-	parentProcessId = os.Getppid()
+	parentProcessId := os.Getppid()
 
 	// If the parent process dies, we should exit.
 	// https://stackoverflow.com/a/44367857
 	go func() {
 		for {
-			process, err := os.FindProcess(parentProcessId)
+			_, err := os.FindProcess(parentProcessId)
 			if err != nil {
 				log.Fatalln("Enterprise cert signer's parent process died, exiting...")
 			}
