@@ -76,6 +76,21 @@ func TestClient_Sign(t *testing.T) {
 	}
 }
 
+func TestClient_SignStress(t *testing.T) {
+	key, err := Cred("/usr/local/google/home/clundin/.config/gcloud/certificate_config.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 100; i++ {
+		go func() {
+			_, err = key.Sign(nil, []byte("testDigest"), nil)
+			if err != nil {
+				t.Errorf("Signature failed with: %v", err)
+			}
+		}()
+	}
+}
+
 func TestClient_Sign_HashSizeMismatch(t *testing.T) {
 	key, err := Cred("testdata/certificate_config.json")
 	if err != nil {

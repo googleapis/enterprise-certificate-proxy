@@ -28,6 +28,7 @@ import (
 	"net/rpc"
 	"os"
 	"os/exec"
+	"sync"
 
 	"github.com/googleapis/enterprise-certificate-proxy/client/util"
 )
@@ -35,6 +36,8 @@ import (
 const signAPI = "EnterpriseCertSigner.Sign"
 const certificateChainAPI = "EnterpriseCertSigner.CertificateChain"
 const publicKeyAPI = "EnterpriseCertSigner.Public"
+
+var mu sync.Mutex
 
 // A Connection wraps a pair of unidirectional streams as an io.ReadWriteCloser.
 type Connection struct {
@@ -100,6 +103,8 @@ func (k *Key) Public() crypto.PublicKey {
 
 // Sign signs a message digest, using the specified signer options.
 func (k *Key) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (signed []byte, err error) {
+	mu.Lock()
+	defer mu.Unlock()
 	if opts != nil && opts.HashFunc() != 0 && len(digest) != opts.HashFunc().Size() {
 		return nil, fmt.Errorf("Digest length of %v bytes does not match Hash function size of %v bytes", len(digest), opts.HashFunc().Size())
 	}
