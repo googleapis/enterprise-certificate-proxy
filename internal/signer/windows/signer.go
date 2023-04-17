@@ -28,7 +28,6 @@ import (
 	"os"
 	"signer/ncrypt"
 	"signer/util"
-	"time"
 )
 
 // If ECP Logging is enabled return true
