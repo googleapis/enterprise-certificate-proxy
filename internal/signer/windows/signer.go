@@ -116,17 +116,5 @@ func main() {
 		log.Fatalf("Failed to register enterprise cert signer with net/rpc: %v", err)
 	}
 
-	// If the parent process dies, we should exit.
-	// We can detect this by periodically checking if the PID of the parent
-	// process is 1 (https://stackoverflow.com/a/2035683).
-	go func() {
-		for {
-			if os.Getppid() == 1 {
-				log.Fatalln("Enterprise cert signer's parent process died, exiting...")
-			}
-			time.Sleep(time.Second)
-		}
-	}()
-
 	rpc.ServeConn(&Connection{os.Stdin, os.Stdout})
 }
