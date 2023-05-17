@@ -61,11 +61,7 @@ It is stored as a JSON file at the following location on the user's device:
 * **Linux and MacOS**: ~/.config/gcloud/certificate_config.json
 * **Windows**: %APPDATA%\gcloud\certificate_config.json 
 
-You can also put the JSON in the location of your choice and set the path to it using:
-
-      `$ gcloud config set context_aware/enterprise_certificate_config_file_path "<json file path>"`.
-
-Another approach for setting the JSON file location is setting the location with the `GOOGLE_API_CERTIFICATE_CONFIG` environment variable. Below are example configurations:
+Below are example configurations:
 
 #### MacOS (Keychain)
 
@@ -132,8 +128,7 @@ variable.
 #### Example
 
 ```
-export ENABLE_ENTERPRISE_CERTIFICATE_LOGS=1 # Now the
-enterprise-certificate-proxy will output logs to stdout.
+export ENABLE_ENTERPRISE_CERTIFICATE_LOGS=1 # Now the enterprise-certificate-proxy will output logs to stdout.
 ```
 
 ## Building ECP binaries from source
