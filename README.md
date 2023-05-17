@@ -1,4 +1,4 @@
-# Google Proxies for Enterprise Certificates (Preview)
+# Google Proxies for Enterprise Certificates (GA)
 
 ## Certificate-based-access
 
@@ -12,52 +12,60 @@ To interact the client certificates, application code should not need to use mos
 
 ## Compatibility
 
-Currently ECP is in Preview stage and all the APIs and configurations are **subject to change**.
-
 The following platforms/keystores are supported by ECP:
 
 - MacOS: __Keychain__
 - Linux: __PKCS#11__
 - Windows: __MY__
 
-## Prerequisites
+## User Guide
 
-Before using ECP with your application/client, you should follow the instructions [here][enterprisecert] to configure your enterprise certificate policies with Access Context Manager.
+Before using ECP with your application/client, you should complete the policy configurations documented in [Enable CBA for Enterprise Certificate][enterprisecert]. The remainder of this README focuses on client configuration.
 
 ### Quick Start
 
-1. Install gcloud CLI (Cloud SDK) at: https://cloud.google.com/sdk/docs/install.
+1. Install gcloud CLI (Cloud SDK) at: https://cloud.google.com/sdk/docs/install. Install with the bundled python option enabled.
 
-   1. **Note:** gcloud version 416.0 or newer is required.
+   1. **Note:** gcloud version 416.0 or newer is required. Version 430.0 or newer is recommended.
 
-1. `$ gcloud components install enterprise-certificate-proxy`.
+1. For macOS and Linux, run the install.sh script after downloading it to complete installation. 
+    ```
+    $ ./google-cloud-sdk/install.sh
+    ```
+1. Install the ECP helper component:
+    ```
+    $ gcloud components install enterprise-certificate-proxy
+    ```
+1. Initialize ECP certificate configuration:
 
-1. **MacOS ONLY**
+   * **MacOS** `$ gcloud auth enterprise-certificate-config create macos --issuer=<CERT_ISSUER>`
 
-   1. `$ gcloud config virtualenv create`
+   * **Linux** `$ gcloud auth enterprise-certificate-config create linux --label=<CERT_LABEL> --module=<PKCS11_MODULE_PATH> --slot=<SLOT_ID>`
 
-   1. `$ gcloud config virtualenv enable`
-
-1. Create a new JSON file at `~/.config/gcloud/certificate_config.json`:
-
-    - Alternatively you can put the JSON in the location of your choice and set the path to it using:
-
-      `$ gcloud config set context_aware/enterprise_certificate_config_file_path "<json file path>"`.
-
-    - Another approach for setting the JSON file location is setting the location with the `GOOGLE_API_CERTIFICATE_CONFIG` environment variable.
-
-1. Update the `certificate_config.json` file with details about the certificate (See [Configuration](#certificate-configutation) section for details.)
+   * **Windows** `$ gcloud auth enterprise-certificate-config create windows --issuer=<CERT_ISSUER> --provider=<PROVIDER> --store=<STORE>`
 
 1. Enable usage of client certificates through gcloud CLI config command:
     ```
-    gcloud config set context_aware/use_client_certificate true
+    $ gcloud config set context_aware/use_client_certificate true
+    ```
+1. You can now use gcloud to access CBA-protected GCP resources. For example:
+    ```
+    $ gcloud pubsub topics list
     ```
 
-1. You can now use gcloud to access GCP resources with mTLS.
+### Manual Certificate Configuration
 
-### Certificate Configuration
+ECP relies on the `certificate_config.json` file to read all the metadata information for locating the certificate.
+It is stored as a JSON file at the following location on the user's device:
 
-ECP relies on the `certificate_config.json` file to read all the metadata information for locating the certificate. The contents of this JSON file look like the following:
+* **Linux and MacOS**: ~/.config/gcloud/certificate_config.json
+* **Windows**: %APPDATA%\gcloud\certificate_config.json 
+
+You can also put the JSON in the location of your choice and set the path to it using:
+
+      `$ gcloud config set context_aware/enterprise_certificate_config_file_path "<json file path>"`.
+
+Another approach for setting the JSON file location is setting the location with the `GOOGLE_API_CERTIFICATE_CONFIG` environment variable. Below are example configurations:
 
 #### MacOS (Keychain)
 
@@ -128,7 +136,7 @@ export ENABLE_ENTERPRISE_CERTIFICATE_LOGS=1 # Now the
 enterprise-certificate-proxy will output logs to stdout.
 ```
 
-## Build binaries
+## Building ECP binaries from source
 
 For amd64 MacOS, run `./build/scripts/darwin_amd64.sh`. The binaries will be placed in `build/bin/darwin_amd64` folder.
 
@@ -150,6 +158,6 @@ Apache - See [LICENSE](./LICENSE) for more information.
 [openssl]: https://wiki.openssl.org/index.php/Binaries
 [keystore]: https://en.wikipedia.org/wiki/Key_management
 [cloudsdk]: https://cloud.google.com/sdk
-[enterprisecert]: https://cloud.google.com/access-context-manager/docs/enterprise-certificates
+[enterprisecert]: https://cloud.google.com/beyondcorp-enterprise/docs/enable-cba-enterprise-certificates
 [zerotrust]: https://cloud.google.com/blog/topics/developers-practitioners/zero-trust-and-beyondcorp-google-cloud
 
