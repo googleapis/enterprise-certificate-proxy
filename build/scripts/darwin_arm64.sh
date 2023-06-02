@@ -22,7 +22,7 @@ mkdir -p ./build/bin/darwin_arm64
 # Build the signer binary
 cd ./internal/signer/darwin
 CGO_ENABLED=1 GO111MODULE=on GOARCH=arm64 go build
-mv signer ./../../../build/bin/darwin_arm64/ecp
+mv darwin ./../../../build/bin/darwin_arm64/ecp
 cd ./../../..
 
 # Build the signer library
