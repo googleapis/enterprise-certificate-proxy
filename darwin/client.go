@@ -20,8 +20,9 @@ package darwin
 
 import (
 	"crypto"
-	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/darwin/keychain"
 	"io"
+
+	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/darwin/keychain"
 )
 
 // SecureKey is a public wrapper for the internal keychain implementation.
@@ -49,10 +50,9 @@ func (sk *SecureKey) Close() {
 	sk.key.Close()
 }
 
-// Cred gets the first Credential (filtering on issuer) corresponding to
-// available certificate and private key pairs (i.e. identities) available in
-// the Keychain. This includes both the current login keychain for the user,
-// and the system keychain.
+// NewSecureKey returns a handle to the first available certificate and private key pair in
+// the MacOS Keychain matching the issuer filter. This includes both the current login keychain
+// for the user as well as the system keychain.
 func NewSecureKey(issuerCN string) (*SecureKey, error) {
 	k, err := keychain.Cred(issuerCN)
 	return &SecureKey{key: k}, err
