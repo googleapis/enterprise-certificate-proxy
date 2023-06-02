@@ -26,9 +26,10 @@ import (
 	"log"
 	"net/rpc"
 	"os"
-	"signer/keychain"
-	"signer/util"
 	"time"
+
+	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/darwin/keychain"
+	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/darwin/util"
 )
 
 // If ECP Logging is enabled return true
