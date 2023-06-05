@@ -14,8 +14,8 @@
 //go:build darwin && cgo
 // +build darwin,cgo
 
-// Package darwin contains a darwin-specific client for accessing the signer APIs directly,
-// bypassing the RPC-mechanims of the universal client.
+// Package darwin contains a darwin-specific client for accessing the keychain APIs directly,
+// bypassing the RPC mechanism of the universal client.
 package darwin
 
 import (
@@ -30,7 +30,7 @@ type SecureKey struct {
 	key *keychain.Key
 }
 
-// CertificateChain returns the credential as a raw X509 cert chain. This contains the public key.
+// CertificateChain returns the SecureKey's raw X509 cert chain. This contains the public key.
 func (sk *SecureKey) CertificateChain() [][]byte {
 	return sk.key.CertificateChain()
 }
@@ -51,7 +51,7 @@ func (sk *SecureKey) Close() {
 }
 
 // NewSecureKey returns a handle to the first available certificate and private key pair in
-// the MacOS Keychain matching the issuer filter. This includes both the current login keychain
+// the MacOS Keychain matching the issuer CN filter. This includes both the current login keychain
 // for the user as well as the system keychain.
 func NewSecureKey(issuerCN string) (*SecureKey, error) {
 	k, err := keychain.Cred(issuerCN)
