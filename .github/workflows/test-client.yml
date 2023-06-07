@@ -28,4 +28,5 @@ jobs:
       uses: golangci/golangci-lint-action@v3
       with:
         version: latest
+        working-directory: ./client
         args: -E gofmt --max-same-issues 0

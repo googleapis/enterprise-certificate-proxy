@@ -22,7 +22,7 @@ mkdir -p ./build/bin/darwin_amd64
 # Build the signer binary
 cd ./internal/signer/darwin
 go build
-mv signer ./../../../build/bin/darwin_amd64/ecp
+mv darwin ./../../../build/bin/darwin_amd64/ecp
 cd ./../../..
 
 # Build the signer library
