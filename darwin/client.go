@@ -55,5 +55,8 @@ func (sk *SecureKey) Close() {
 // for the user as well as the system keychain.
 func NewSecureKey(issuerCN string) (*SecureKey, error) {
 	k, err := keychain.Cred(issuerCN)
+	if err != nil {
+		return nil, err
+	}
 	return &SecureKey{key: k}, err
 }
