@@ -58,5 +58,5 @@ func NewSecureKey(issuerCN string) (*SecureKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &SecureKey{key: k}, err
+	return &SecureKey{key: k}, nil
 }
