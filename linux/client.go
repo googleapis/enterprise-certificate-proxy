@@ -16,8 +16,8 @@
 package linux
 
 import (
-	"io"
 	"crypto"
+	"io"
 
 	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/linux/pkcs11"
 )
