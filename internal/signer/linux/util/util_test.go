@@ -46,21 +46,3 @@ func TestLoadConfigMissing(t *testing.T) {
 		t.Error("Expected error but got nil")
 	}
 }
-
-func TestParseHexString(t *testing.T) {
-	got, err := ParseHexString("0x1739427")
-	if err != nil {
-		t.Fatalf("ParseHexString error: %v", err)
-	}
-	want := uint32(0x1739427)
-	if got != want {
-		t.Errorf("Expected result is %v, got: %v", want, got)
-	}
-}
-
-func TestParseHexStringFailure(t *testing.T) {
-	_, err := ParseHexString("abcdefgh")
-	if err == nil {
-		t.Error("Expected error but got nil")
-	}
-}

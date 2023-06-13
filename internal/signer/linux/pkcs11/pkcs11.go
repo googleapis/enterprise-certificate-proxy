@@ -11,16 +11,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Cert_util provides helpers for working with certificates via PKCS11
-package util
+// pkcs11 provides helpers for working with certificates via PKCS#11 APIs
+// provided by go-pkcs11
+package pkcs11
 
 import (
 	"crypto"
 	"errors"
 	"io"
+	"strconv"
+	"strings"
 
 	"github.com/google/go-pkcs11/pkcs11"
 )
+
+// ParseHexString parses hexadecimal string into uint32
+func ParseHexString(str string) (i uint32, err error) {
+	stripped := strings.Replace(str, "0x", "", -1)
+	resultUint64, err := strconv.ParseUint(stripped, 16, 32)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(resultUint64), nil
+}
 
 // Cred returns a Key wrapping the first valid certificate in the pkcs11 module
 // matching a given slot and label.

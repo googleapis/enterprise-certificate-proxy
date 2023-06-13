@@ -27,8 +27,10 @@ import (
 	"log"
 	"net/rpc"
 	"os"
-	"signer/util"
 	"time"
+
+	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/linux/pkcs11"
+	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/linux/util"
 )
 
 // If ECP Logging is enabled return true
@@ -57,7 +59,7 @@ type SignArgs struct {
 
 // A EnterpriseCertSigner exports RPC methods for signing.
 type EnterpriseCertSigner struct {
-	key *util.Key
+	key *pkcs11.Key
 }
 
 // A Connection wraps a pair of unidirectional streams as an io.ReadWriteCloser.
@@ -107,7 +109,7 @@ func main() {
 	}
 
 	enterpriseCertSigner := new(EnterpriseCertSigner)
-	enterpriseCertSigner.key, err = util.Cred(config.CertConfigs.PKCS11.PKCS11Module, config.CertConfigs.PKCS11.Slot, config.CertConfigs.PKCS11.Label, config.CertConfigs.PKCS11.UserPin)
+	enterpriseCertSigner.key, err = pkcs11.Cred(config.CertConfigs.PKCS11.PKCS11Module, config.CertConfigs.PKCS11.Slot, config.CertConfigs.PKCS11.Label, config.CertConfigs.PKCS11.UserPin)
 	if err != nil {
 		log.Fatalf("Failed to initialize enterprise cert signer using pkcs11: %v", err)
 	}

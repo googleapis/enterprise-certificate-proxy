@@ -18,19 +18,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"strconv"
-	"strings"
 )
-
-// ParseHexString parses hexadecimal string into uint32
-func ParseHexString(str string) (i uint32, err error) {
-	stripped := strings.Replace(str, "0x", "", -1)
-	resultUint64, err := strconv.ParseUint(stripped, 16, 32)
-	if err != nil {
-		return 0, err
-	}
-	return uint32(resultUint64), nil
-}
 
 // EnterpriseCertificateConfig contains parameters for initializing signer.
 type EnterpriseCertificateConfig struct {
