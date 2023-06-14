@@ -18,10 +18,10 @@ package pkcs11
 import (
 	"crypto"
 	"errors"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
-	"fmt"
 
 	"github.com/google/go-pkcs11/pkcs11"
 )
