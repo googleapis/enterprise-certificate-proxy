@@ -58,7 +58,7 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 	}
 
 	if len(certs) < 1 {
-		return nil, fmt.Errorf("No certificate object was found with label %s.", label )
+		return nil, fmt.Errorf("No certificate object was found with label %s.", label)
 	}
 
 	cert, err := certs[0].Certificate()
@@ -78,7 +78,7 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 	}
 
 	if len(pubKeys) < 1 {
-		return nil, fmt.Errorf("No public key object was found with label %s.", label )
+		return nil, fmt.Errorf("No public key object was found with label %s.", label)
 	}
 
 	pubKey, err := pubKeys[0].PublicKey()
@@ -92,7 +92,7 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 	}
 
 	if len(privkeys) < 1 {
-		return nil, fmt.Errorf("No private key object was found with label %s.", label )
+		return nil, fmt.Errorf("No private key object was found with label %s.", label)
 	}
 
 	privKey, err := privkeys[0].PrivateKey(pubKey)
