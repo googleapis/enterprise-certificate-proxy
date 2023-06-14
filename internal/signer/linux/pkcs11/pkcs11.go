@@ -21,6 +21,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"fmt"
 
 	"github.com/google/go-pkcs11/pkcs11"
 )
@@ -55,6 +56,11 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 	if err != nil {
 		return nil, err
 	}
+
+	if len(certs) < 1 {
+		return nil, fmt.Errorf("No certificate object was found with label %s.", label )
+	}
+
 	cert, err := certs[0].Certificate()
 	if err != nil {
 		return nil, err
@@ -70,6 +76,11 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 	if err != nil {
 		return nil, err
 	}
+
+	if len(pubKeys) < 1 {
+		return nil, fmt.Errorf("No public key object was found with label %s.", label )
+	}
+
 	pubKey, err := pubKeys[0].PublicKey()
 	if err != nil {
 		return nil, err
@@ -79,6 +90,11 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 	if err != nil {
 		return nil, err
 	}
+
+	if len(privkeys) < 1 {
+		return nil, fmt.Errorf("No private key object was found with label %s.", label )
+	}
+
 	privKey, err := privkeys[0].PrivateKey(pubKey)
 	if err != nil {
 		return nil, err
