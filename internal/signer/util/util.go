@@ -25,16 +25,31 @@ type EnterpriseCertificateConfig struct {
 	CertConfigs CertConfigs `json:"cert_configs"`
 }
 
-// CertConfigs is a container for various ECP Configs.
+// CertConfigs is a container for various OS-specific ECP Configs.
 type CertConfigs struct {
-	WindowsStore WindowsStore `json:"windows_store"`
+	MacOSKeychain MacOSKeychain `json:"macos_keychain"`
+	WindowsStore  WindowsStore  `json:"windows_store"`
+	PKCS11        PKCS11        `json:"pkcs11"`
 }
 
-// WindowsStore contains parameters describing the certificate to use.
+// MacOSKeychain contains keychain parameters describing the certificate to use.
+type MacOSKeychain struct {
+	Issuer string `json:"issuer"`
+}
+
+// WindowsStore contains windows key store parameters describing the certificate to use.
 type WindowsStore struct {
 	Issuer   string `json:"issuer"`
 	Store    string `json:"store"`
 	Provider string `json:"provider"`
+}
+
+// PKCS11 contains PKCS#11 parameters describing the certificate to use.
+type PKCS11 struct {
+	Slot         string `json:"slot"`     // The hexadecimal representation of the uint36 slot ID. (ex:0x1739427)
+	Label        string `json:"label"`    // The token label (ex: gecc)
+	PKCS11Module string `json:"module"`   // The path to the pkcs11 module (shared lib)
+	UserPin      string `json:"user_pin"` // Optional user pin to unlock the PKCS #11 module. If it is not defined or empty C_Login will not be called.
 }
 
 // LoadConfig retrieves the ECP config file.
@@ -53,5 +68,4 @@ func LoadConfig(configFilePath string) (config EnterpriseCertificateConfig, err 
 		return EnterpriseCertificateConfig{}, err
 	}
 	return config, nil
-
 }

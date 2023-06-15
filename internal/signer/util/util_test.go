@@ -19,10 +19,17 @@ import (
 
 func TestLoadConfig(t *testing.T) {
 	config, err := LoadConfig("./test_data/certificate_config.json")
+	// darwin
 	if err != nil {
 		t.Errorf("LoadConfig error: %q", err)
 	}
-	want := "enterprise_v1_corp_client"
+	want := "Google Endpoint Verification"
+	if config.CertConfigs.MacOSKeychain.Issuer != want {
+		t.Errorf("Expected issuer is %q, got: %q", want, config.CertConfigs.MacOSKeychain.Issuer)
+	}
+
+	// windows
+	want = "enterprise_v1_corp_client"
 	if config.CertConfigs.WindowsStore.Issuer != want {
 		t.Errorf("Expected issuer is %q, got: %q", want, config.CertConfigs.WindowsStore.Issuer)
 	}
@@ -33,5 +40,30 @@ func TestLoadConfig(t *testing.T) {
 	want = "current_user"
 	if config.CertConfigs.WindowsStore.Provider != want {
 		t.Errorf("Expected provider is %q, got: %q", want, config.CertConfigs.WindowsStore.Provider)
+	}
+
+	// pkcs11
+	want = "0x1739427"
+	if config.CertConfigs.PKCS11.Slot != want {
+		t.Errorf("Expected slot is %v, got: %v", want, config.CertConfigs.PKCS11.Slot)
+	}
+	want = "gecc"
+	if config.CertConfigs.PKCS11.Label != want {
+		t.Errorf("Expected label is %v, got: %v", want, config.CertConfigs.PKCS11.Label)
+	}
+	want = "pkcs11_module.so"
+	if config.CertConfigs.PKCS11.PKCS11Module != want {
+		t.Errorf("Expected pkcs11_module is %v, got: %v", want, config.CertConfigs.PKCS11.PKCS11Module)
+	}
+	want = "0000"
+	if config.CertConfigs.PKCS11.UserPin != want {
+		t.Errorf("Expected user pin is %v, got: %v", want, config.CertConfigs.PKCS11.UserPin)
+	}
+}
+
+func TestLoadConfigMissing(t *testing.T) {
+	_, err := LoadConfig("./test_data/certificate_config_missing.json")
+	if err == nil {
+		t.Error("Expected error but got nil")
 	}
 }

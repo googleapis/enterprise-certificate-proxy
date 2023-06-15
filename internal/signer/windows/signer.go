@@ -28,7 +28,7 @@ import (
 	"os"
 
 	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/windows/ncrypt"
-	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/windows/util"
+	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/util"
 )
 
 // If ECP Logging is enabled return true
