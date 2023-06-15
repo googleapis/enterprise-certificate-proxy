@@ -11,20 +11,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package linux contains a linux-specific client for accessing the PKCS#11 APIs directly,
+// Package windows contains a windows-specific client for accessing the ncrypt APIs directly,
 // bypassing the RPC-mechanism of the universal client.
-package linux
+package windows
 
 import (
 	"crypto"
 	"io"
 
-	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/linux/pkcs11"
+	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/windows/ncrypt"
 )
 
-// SecureKey is a public wrapper for the internal PKCS#11 implementation.
+// SecureKey is a public wrapper for the internal ncrypt implementation.
 type SecureKey struct {
-	key *pkcs11.Key
+	key *ncrypt.Key
 }
 
 // CertificateChain returns the SecureKey's raw X509 cert chain. This contains the public key.
@@ -48,9 +48,9 @@ func (sk *SecureKey) Close() {
 }
 
 // NewSecureKey returns a handle to the first available certificate and private key pair in
-// the specified PKCS#11 Module matching the filters.
-func NewSecureKey(pkcs11Module string, slotUint32Str string, label string, userPin string) (*SecureKey, error) {
-	k, err := pkcs11.Cred(pkcs11Module, slotUint32Str, label, userPin)
+// the specified Windows key store matching the filters.
+func NewSecureKey(issuer string, store string, provider string) (*SecureKey, error) {
+	k, err := ncrypt.Cred(issuer, store, provider)
 	if err != nil {
 		return nil, err
 	}
