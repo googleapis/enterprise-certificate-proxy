@@ -37,7 +37,7 @@ type MacOSKeychain struct {
 	Issuer string `json:"issuer"`
 }
 
-// WindowsStore contains windows key store parameters describing the certificate to use.
+// WindowsStore contains Windows key store parameters describing the certificate to use.
 type WindowsStore struct {
 	Issuer   string `json:"issuer"`
 	Store    string `json:"store"`

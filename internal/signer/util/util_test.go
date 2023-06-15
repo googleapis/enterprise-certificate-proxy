@@ -21,7 +21,7 @@ func TestLoadConfig(t *testing.T) {
 	config, err := LoadConfig("./test_data/certificate_config.json")
 	// darwin
 	if err != nil {
-		t.Errorf("LoadConfig error: %q", err)
+		t.Fatalf("LoadConfig error: %q", err)
 	}
 	want := "Google Endpoint Verification"
 	if config.CertConfigs.MacOSKeychain.Issuer != want {
