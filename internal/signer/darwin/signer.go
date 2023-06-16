@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/darwin/keychain"
-	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/darwin/util"
+	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/util"
 )
 
 // If ECP Logging is enabled return true

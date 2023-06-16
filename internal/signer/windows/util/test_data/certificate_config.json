@@ -1,9 +1,0 @@
-{
-  "cert_configs": {
-    "windows_store": {
-      "issuer": "enterprise_v1_corp_client",
-      "store": "MY",
-      "provider": "current_user"
-    }
-  }
-}

@@ -23,7 +23,7 @@ If (Test-Path $OutputFolder) {
 # Build the signer binary
 Set-Location .\internal\signer\windows
 go build
-Move-Item .\signer.exe ..\..\..\build\bin\windows_amd64\ecp.exe
+Move-Item .\windows.exe ..\..\..\build\bin\windows_amd64\ecp.exe
 Set-Location ..\..\..\
 
 # Build the signer library

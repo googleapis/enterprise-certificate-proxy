@@ -30,7 +30,7 @@ import (
 	"time"
 
 	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/linux/pkcs11"
-	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/linux/util"
+	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/util"
 )
 
 // If ECP Logging is enabled return true
