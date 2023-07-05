@@ -40,6 +40,19 @@ func TestLoadSignerBinaryPathHome(t *testing.T) {
 		t.Errorf("Expected path is %q, got: %q", want, path)
 	}
 }
+
+func TestLoadSignerBinaryPathTilde(t *testing.T) {
+	homeDir, err := os.UserHomeDir()
+	path, err := LoadSignerBinaryPath("./test_data/certificate_config/~Expansion.json")
+	if err != nil {
+		t.Errorf("LoadSignerBinaryPath error: %q", err)
+	}
+	want := homeDir + "/ecp/signer"
+	if path != want {
+		t.Errorf("Expected path is %q, got: %q", want, path)
+	}
+}
+
 func TestGetConfigFilePathFromEnv(t *testing.T) {
 	want := "/testpath"
 	os.Setenv("GOOGLE_API_CERTIFICATE_CONFIG", want)
