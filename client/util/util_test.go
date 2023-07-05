@@ -33,7 +33,7 @@ func TestLoadSignerBinaryPathHome(t *testing.T) {
 	if err != nil {
 		t.Errorf("LoadSignerBinaryPath error: %q", err)
 	}
-	want := "/Users/angelahao/ecp/signer"
+	want := homeDir + /ecp/signer"
 	if path != want {
 		t.Errorf("Expected path is %q, got: %q", want, path)
 	}
