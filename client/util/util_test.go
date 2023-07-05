@@ -30,24 +30,22 @@ func TestLoadSignerBinaryPath(t *testing.T) {
 }
 
 func TestLoadSignerBinaryPathHome(t *testing.T) {
-	homeDir, err := os.UserHomeDir()
-	path, err := LoadSignerBinaryPath("./test_data/certificate_config/homeExpansion.json")
+	path, err := LoadSignerBinaryPath("./test_data/certificate_config_home_expansion.json")
 	if err != nil {
 		t.Errorf("LoadSignerBinaryPath error: %q", err)
 	}
-	want := homeDir + "/ecp/signer"
+	want := guessHomeDir() + "/ecp/signer"
 	if path != want {
 		t.Errorf("Expected path is %q, got: %q", want, path)
 	}
 }
 
 func TestLoadSignerBinaryPathTilde(t *testing.T) {
-	homeDir, err := os.UserHomeDir()
-	path, err := LoadSignerBinaryPath("./test_data/certificate_config/~Expansion.json")
+	path, err := LoadSignerBinaryPath("./test_data/certificate_config_tilde_expansion.json")
 	if err != nil {
 		t.Errorf("LoadSignerBinaryPath error: %q", err)
 	}
-	want := homeDir + "/ecp/signer"
+	want := guessHomeDir() + "/ecp/signer"
 	if path != want {
 		t.Errorf("Expected path is %q, got: %q", want, path)
 	}

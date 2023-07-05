@@ -65,12 +65,8 @@ func LoadSignerBinaryPath(configFilePath string) (path string, err error) {
 		return "", ErrConfigUnavailable
 	}
 
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	signerBinaryPath = strings.ReplaceAll(signerBinaryPath, "~", homeDir)
-	signerBinaryPath = strings.ReplaceAll(signerBinaryPath, "$HOME", homeDir)
+	signerBinaryPath = strings.ReplaceAll(signerBinaryPath, "~", guessHomeDir())
+	signerBinaryPath = strings.ReplaceAll(signerBinaryPath, "$HOME", guessHomeDir())
 	return signerBinaryPath, nil
 }
 
