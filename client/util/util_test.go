@@ -14,8 +14,8 @@
 package util
 
 import (
-	"testing"
 	"os"
+	"testing"
 )
 
 func TestLoadSignerBinaryPath(t *testing.T) {
