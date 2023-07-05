@@ -1,6 +1,5 @@
 {
     "libs": {
-      "ecp": "HOME/ecp/signer"
+      "ecp": "~/ecp/signer"
     }
 }
-  

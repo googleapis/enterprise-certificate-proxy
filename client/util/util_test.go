@@ -14,6 +14,7 @@
 package util
 
 import (
+	"os"
 	"testing"
 )
 
@@ -29,11 +30,12 @@ func TestLoadSignerBinaryPath(t *testing.T) {
 }
 
 func TestLoadSignerBinaryPathHome(t *testing.T) {
+	homeDir, err := os.UserHomeDir()
 	path, err := LoadSignerBinaryPath("./test_data/certificate_config/homeExpansion.json")
 	if err != nil {
 		t.Errorf("LoadSignerBinaryPath error: %q", err)
 	}
-	want := "/Users/angelahao/ecp/signer"
+	want := homeDir + "/ecp/signer"
 	if path != want {
 		t.Errorf("Expected path is %q, got: %q", want, path)
 	}

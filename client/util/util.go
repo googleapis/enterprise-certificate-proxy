@@ -41,7 +41,6 @@ type Libs struct {
 // possibly due to entire config missing or missing binary path.
 var ErrConfigUnavailable = errors.New("Config is unavailable")
 
-/* UPDATED FUNCTION */
 // LoadSignerBinaryPath retrieves the path of the signer binary from the config file.
 func LoadSignerBinaryPath(configFilePath string) (path string, err error) {
 	jsonFile, err := os.Open(configFilePath)
@@ -65,50 +64,19 @@ func LoadSignerBinaryPath(configFilePath string) (path string, err error) {
 	if signerBinaryPath == "" {
 		return "", ErrConfigUnavailable
 	}
-	// Checking for ~ & HOME variables to represent home directory
-	if strings.Contains(signerBinaryPath, "~") || strings.Contains(signerBinaryPath, "HOME") {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return "", ErrConfigUnavailable
-		}
-		// Updating signerBinaryPath to substitute "~" or "HOME" with the home directory + the rest of the path
-		if strings.Contains(signerBinaryPath, "~") {
-			signerBinaryPath = homeDir + strings.TrimLeft(signerBinaryPath, "~")
-		}
-		if strings.Contains(signerBinaryPath, "HOME") {
-			signerBinaryPath = homeDir + strings.TrimLeft(signerBinaryPath, "HOME")
-		}
-		return signerBinaryPath, nil
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	// Checking for the "~" or "$HOME" variables to represent home directory
+	if signerBinaryPath[0] == '~' {
+		signerBinaryPath = strings.ReplaceAll(signerBinaryPath, "~", homeDir)
+	} else if strings.Contains(signerBinaryPath, "$HOME") {
+		signerBinaryPath = strings.ReplaceAll(signerBinaryPath, "$HOME", homeDir)
 	}
 	return signerBinaryPath, nil
 }
-
-/* ORIGINAL FUNCTION */
-// // LoadSignerBinaryPath retrieves the path of the signer binary from the config file.
-// func LoadSignerBinaryPath(configFilePath string) (path string, err error) {
-// 	jsonFile, err := os.Open(configFilePath)
-// 	if err != nil {
-// 		if errors.Is(err, os.ErrNotExist) {
-// 			return "", ErrConfigUnavailable
-// 		}
-// 		return "", err
-// 	}
-
-// 	byteValue, err := io.ReadAll(jsonFile)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	var config EnterpriseCertificateConfig
-// 	err = json.Unmarshal(byteValue, &config)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	signerBinaryPath := config.Libs.ECP
-// 	if signerBinaryPath == "" {
-// 		return "", ErrConfigUnavailable
-// 	}
-// 	return signerBinaryPath, nil
-// }
 
 func guessHomeDir() string {
 	// Prefer $HOME over user.Current due to glibc bug: golang.org/issue/13470
