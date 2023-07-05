@@ -27,3 +27,14 @@ func TestLoadSignerBinaryPath(t *testing.T) {
 		t.Errorf("Expected path is %q, got: %q", want, path)
 	}
 }
+
+func TestLoadSignerBinaryPathHome(t *testing.T) {
+	path, err := LoadSignerBinaryPath("./test_data/certificate_config/homeExpansion.json")
+	if err != nil {
+		t.Errorf("LoadSignerBinaryPath error: %q", err)
+	}
+	want := "/Users/angelahao/ecp/signer"
+	if path != want {
+		t.Errorf("Expected path is %q, got: %q", want, path)
+	}
+}
