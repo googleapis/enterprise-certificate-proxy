@@ -101,3 +101,8 @@ func getDefaultConfigFileDirectory() (directory string) {
 func GetDefaultConfigFilePath() (path string) {
 	return filepath.Join(getDefaultConfigFileDirectory(), configFileName)
 }
+
+// GetConfigFilePathFromEnv returns the path associated with environment variable GOOGLE_API_CERTIFICATE_CONFIG
+func GetConfigFilePathFromEnv() (path string) {
+	return os.Getenv("GOOGLE_API_CERTIFICATE_CONFIG")
+}

@@ -120,7 +120,12 @@ var ErrCredUnavailable = errors.New("Cred is unavailable")
 // The config file also specifies which certificate the signer should use.
 func Cred(configFilePath string) (*Key, error) {
 	if configFilePath == "" {
-		configFilePath = util.GetDefaultConfigFilePath()
+		envFilePath := util.GetConfigFilePathFromEnv()
+		if envFilePath != "" {
+			configFilePath = envFilePath
+		} else {
+			configFilePath = util.GetDefaultConfigFilePath()
+		}
 	}
 	enterpriseCertSignerPath, err := util.LoadSignerBinaryPath(configFilePath)
 	if err != nil {
