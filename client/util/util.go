@@ -22,6 +22,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 const configFileName = "certificate_config.json"
@@ -63,6 +64,9 @@ func LoadSignerBinaryPath(configFilePath string) (path string, err error) {
 	if signerBinaryPath == "" {
 		return "", ErrConfigUnavailable
 	}
+
+	signerBinaryPath = strings.ReplaceAll(signerBinaryPath, "~", guessHomeDir())
+	signerBinaryPath = strings.ReplaceAll(signerBinaryPath, "$HOME", guessHomeDir())
 	return signerBinaryPath, nil
 }
 
