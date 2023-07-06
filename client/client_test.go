@@ -20,8 +20,6 @@ import (
 	"errors"
 	"os"
 	"testing"
-
-	"github.com/googleapis/enterprise-certificate-proxy/client/util"
 )
 
 func TestClient_Cred_Success(t *testing.T) {
@@ -45,12 +43,21 @@ func TestClient_Cred_PathMissing(t *testing.T) {
 	}
 }
 
-func TestClient_Cred_EnvOverride(t *testing.T) {
-	configFilePath := "/testpath"
-	os.Setenv("GOOGLE_API_CERTIFICATE_CONFIG", util.GetDefaultConfigFilePath())
+func TestClient_Cred_EnvOverride_ExplicitPath(t *testing.T) {
+	configFilePath := "testdata/certificate_config.json"
+	os.Setenv("GOOGLE_API_CERTIFICATE_CONFIG", "testdata/certificiate_config_missing_path.json")
+	_, err := Cred(configFilePath)
+	if err != nil {
+		t.Errorf("Cred: with explicit config; got %v, want %v err", err, nil)
+	}
+}
+
+func TestClient_Cred_EnvOverride_PathMissing(t *testing.T) {
+	configFilePath := ""
+	os.Setenv("GOOGLE_API_CERTIFICATE_CONFIG", "testdata/certificiate_config_missing_path.json")
 	_, err := Cred(configFilePath)
 	if got, want := err, ErrCredUnavailable; !errors.Is(got, want) {
-		t.Errorf("Cred: with explicit config; got %v, want %v err", got, want)
+		t.Errorf("Cred: with empty config and set env var; got %v, want %v err", got, want)
 	}
 }
 
