@@ -18,7 +18,10 @@ import (
 	"bytes"
 	"crypto"
 	"errors"
+	"os"
 	"testing"
+
+	"github.com/googleapis/enterprise-certificate-proxy/client/util"
 )
 
 func TestClient_Cred_Success(t *testing.T) {
@@ -39,6 +42,15 @@ func TestClient_Cred_PathMissing(t *testing.T) {
 	_, err := Cred("testdata/certificate_config_missing_path.json")
 	if got, want := err, ErrCredUnavailable; !errors.Is(got, want) {
 		t.Errorf("Cred: with missing ECP path; got %v, want %v err", got, want)
+	}
+}
+
+func TestClient_Cred_EnvOverride(t *testing.T) {
+	configFilePath := "/testpath"
+	os.Setenv("GOOGLE_API_CERTIFICATE_CONFIG", util.GetDefaultConfigFilePath())
+	_, err := Cred(configFilePath)
+	if got, want := err, ErrCredUnavailable; !errors.Is(got, want) {
+		t.Errorf("Cred: with explicit config; got %v, want %v err", got, want)
 	}
 }
 
