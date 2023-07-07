@@ -36,23 +36,23 @@ func TestClient_Cred_ConfigMissing(t *testing.T) {
 	}
 }
 
-func TestClient_Cred_PathMissing(t *testing.T) {
+func TestClient_Cred_BinaryPathMissing(t *testing.T) {
 	_, err := Cred("testdata/certificate_config_missing_path.json")
 	if got, want := err, ErrCredUnavailable; !errors.Is(got, want) {
 		t.Errorf("Cred: with missing ECP path; got %v, want %v err", got, want)
 	}
 }
 
-func TestClient_Cred_EnvOverride_ExplicitPath(t *testing.T) {
+func TestClient_Cred_ExplicitConfig(t *testing.T) {
 	configFilePath := "testdata/certificate_config.json"
 	os.Setenv("GOOGLE_API_CERTIFICATE_CONFIG", "testdata/certificiate_config_missing_path.json")
 	_, err := Cred(configFilePath)
 	if err != nil {
-		t.Errorf("Cred: with explicit config; got %v, want %v err", err, nil)
+		t.Errorf("Cred: with explicit config and set env var; got %v, want %v err", err, nil)
 	}
 }
 
-func TestClient_Cred_EnvOverride_PathMissing(t *testing.T) {
+func TestClient_Cred_EmptyConfig(t *testing.T) {
 	configFilePath := ""
 	os.Setenv("GOOGLE_API_CERTIFICATE_CONFIG", "testdata/certificiate_config_missing_path.json")
 	_, err := Cred(configFilePath)
