@@ -46,3 +46,47 @@ func TestBytesToCFDataRoundTrip(t *testing.T) {
 		t.Errorf("bytesToCFData -> cfDataToBytes\ngot  %x\nwant %x", got, want)
 	}
 }
+
+func TestEncrypt(t *testing.T) {
+	key, err := Cred("enterprise_v1_corp_client-signer-0-2018-07-03T10:55:10-07:00 K:1, 2:BXmhnePmGN4:0:18")
+	if err != nil {
+		t.Errorf("Cred error: %q", err)
+		return
+	}
+	plaintext := []byte("Plain text to encrypt")
+	_, err = key.Encrypt(plaintext)
+	if err != nil {
+		t.Errorf("Encryption failed: %v", err)
+		return
+	}
+}
+
+func BenchmarkEncrypt(b *testing.B) {
+	key, err := Cred("enterprise_v1_corp_client-signer-0-2018-07-03T10:55:10-07:00 K:1, 2:BXmhnePmGN4:0:18")
+	if err != nil {
+		b.Errorf("Cred error: %q", err)
+		return
+	}
+	plaintext := []byte("Plain text to encrypt")
+	for i := 0; i < b.N; i++ {
+		key.Encrypt(plaintext)
+	}
+}
+
+func TestDecrypt(t *testing.T) {
+	key, err := Cred("enterprise_v1_corp_client-signer-0-2018-07-03T10:55:10-07:00 K:1, 2:BXmhnePmGN4:0:18")
+	if err != nil {
+		t.Errorf("Cred error: %q", err)
+		return
+	}
+	byteSlice := []byte("Plain text to encrypt")
+	ciphertext, _ := key.Encrypt(byteSlice)
+	plaintext, err := key.Decrypt(ciphertext)
+	if err != nil {
+		t.Errorf("Decryption failed: %v", err)
+		return
+	}
+	if !bytes.Equal(byteSlice, plaintext) {
+		t.Errorf("Decryption message does not match original")
+	}
+}
