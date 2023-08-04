@@ -22,6 +22,8 @@ import (
 	"unsafe"
 )
 
+const TEST_CREDENTIALS = "TestIssuer"
+
 func TestKeychainError(t *testing.T) {
 	tests := []struct {
 		e    keychainError
@@ -48,7 +50,7 @@ func TestBytesToCFDataRoundTrip(t *testing.T) {
 }
 
 func TestEncrypt(t *testing.T) {
-	key, err := Cred("enterprise_v1_corp_client-signer-0-2018-07-03T10:55:10-07:00 K:1, 2:BXmhnePmGN4:0:18")
+	key, err := Cred(TEST_CREDENTIALS)
 	if err != nil {
 		t.Errorf("Cred error: %q", err)
 		return
@@ -62,7 +64,7 @@ func TestEncrypt(t *testing.T) {
 }
 
 func BenchmarkEncrypt(b *testing.B) {
-	key, err := Cred("enterprise_v1_corp_client-signer-0-2018-07-03T10:55:10-07:00 K:1, 2:BXmhnePmGN4:0:18")
+	key, err := Cred(TEST_CREDENTIALS)
 	if err != nil {
 		b.Errorf("Cred error: %q", err)
 		return
@@ -74,7 +76,7 @@ func BenchmarkEncrypt(b *testing.B) {
 }
 
 func TestDecrypt(t *testing.T) {
-	key, err := Cred("enterprise_v1_corp_client-signer-0-2018-07-03T10:55:10-07:00 K:1, 2:BXmhnePmGN4:0:18")
+	key, err := Cred(TEST_CREDENTIALS)
 	if err != nil {
 		t.Errorf("Cred error: %q", err)
 		return
@@ -88,5 +90,18 @@ func TestDecrypt(t *testing.T) {
 	}
 	if !bytes.Equal(byteSlice, plaintext) {
 		t.Errorf("Decryption message does not match original")
+	}
+}
+
+func BenchmarkDecrypt(b *testing.B) {
+	key, err := Cred(TEST_CREDENTIALS)
+	if err != nil {
+		b.Errorf("Cred error: %q", err)
+		return
+	}
+	byteSlice := []byte("Plain text to encrypt")
+	ciphertext, _ := key.Encrypt(byteSlice)
+	for i := 0; i < b.N; i++ {
+		key.Decrypt(ciphertext)
 	}
 }

@@ -460,22 +460,22 @@ func (k *Key) getPaddingSize() int {
 		fmt.Printf("algorithm is unsupported. only RSA algorithms are supported. %v", algoErr)
 	}
 	// Each padding scheme has varying number of bytes.
-	PSS_PADDING_NUM := 20
-	OAEP_PADDING_NUM := 130
-	PKCS_PADDING_NUM := 11
+	pssPaddingBytes := 20
+	oaepPaddingBytes := 130
+	pkcsPaddingBytes := 11
 	switch algorithms {
 	case C.kSecKeyAlgorithmRSASignatureDigestPSSSHA256,
 		C.kSecKeyAlgorithmRSASignatureDigestPSSSHA384,
 		C.kSecKeyAlgorithmRSASignatureDigestPSSSHA512:
-		return PSS_PADDING_NUM
+		return pssPaddingBytes
 	case C.kSecKeyAlgorithmRSAEncryptionOAEPSHA256,
 		C.kSecKeyAlgorithmRSAEncryptionOAEPSHA384,
 		C.kSecKeyAlgorithmRSAEncryptionOAEPSHA512:
-		return OAEP_PADDING_NUM
+		return oaepPaddingBytes
 	case C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA256,
 		C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA384,
 		C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA512:
-		return PKCS_PADDING_NUM
+		return pkcsPaddingBytes
 	default:
 		return int(UNKNOWN_SECKEY_ALGORITHM)
 	}
