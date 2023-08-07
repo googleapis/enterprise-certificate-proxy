@@ -1,0 +1,17 @@
+name: Test Credentials Workflow
+
+on:
+    push:
+      branches: [ main ]
+    pull_request:
+      branches: [ main ]
+      
+jobs:
+
+    cred:
+        runs-on: macos-latest
+        steps:
+        - uses: actions/checkout@v3
+
+        - name: Get test credential
+          run: ./cred/scripts/keychain_cred.sh
