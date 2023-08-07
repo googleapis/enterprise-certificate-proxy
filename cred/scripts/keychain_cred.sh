@@ -15,7 +15,7 @@
 
 set -eux
 
-PASSWORD="Mypassword1234"
+PASSWORD="1234"
 WORK_DIR=$(mktemp -d)
 
 pushd /${WORK_DIR}
