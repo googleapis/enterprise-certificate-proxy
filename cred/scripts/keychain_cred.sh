@@ -20,7 +20,6 @@ WORK_DIR=$(mktemp -d)
 
 pushd ${WORK_DIR}
 
-# Create the certificate
 openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -sha256 -days 5 -nodes -subj "/C=US/ST=WA/L=Kirkland/O=Temp/OU=CI/CN=Test>
 openssl pkcs12 -inkey key.pem -in cert.pem -export -out cred.p12 -passin pass:${PASSWORD} -passout pass:${PASSWORD}
 security import cred.p12 -P ${PASSWORD} -A
