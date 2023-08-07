@@ -45,3 +45,11 @@ jobs:
       with:
         name: darwin_arm64
         path: ./build/bin/darwin_arm64/*
+
+  cred:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Get test credential
+      run: ./cred/scripts/keychain_cred.sh
