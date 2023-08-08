@@ -13,6 +13,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Get test credential
+      run: scripts/keychain_cred.sh
+
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
@@ -45,11 +48,3 @@ jobs:
       with:
         name: darwin_arm64
         path: ./build/bin/darwin_arm64/*
-
-  cred:
-    runs-on: macos-latest
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Get test credential
-      run: scripts/keychain_cred.sh
