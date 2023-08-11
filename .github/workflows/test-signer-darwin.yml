@@ -13,9 +13,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Get test credential
-      run: scripts/keychain_cred.sh
-
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
