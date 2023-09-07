@@ -32,6 +32,14 @@ type SignArgs struct {
 	Opts   crypto.SignerOpts
 }
 
+type EncryptArgs struct {
+	Plaintext []byte
+}
+
+type DecryptArgs struct {
+	Ciphertext []byte
+}
+
 // EnterpriseCertSigner exports RPC methods for signing.
 type EnterpriseCertSigner struct {
 	cert *tls.Certificate
@@ -76,6 +84,16 @@ func (k *EnterpriseCertSigner) Public(ignored struct{}, publicKey *[]byte) (err 
 // Sign signs a message digest.
 func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
 	*resp = args.Digest
+	return nil
+}
+
+func (k *EnterpriseCertSigner) Encrypt(args EncryptArgs, plaintext *[]byte) (err error) {
+	*plaintext = args.Plaintext
+	return nil
+}
+
+func (k *EnterpriseCertSigner) Decrypt(args DecryptArgs, ciphertext *[]byte) (err error) {
+	*ciphertext = args.Ciphertext
 	return nil
 }
 

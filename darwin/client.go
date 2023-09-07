@@ -45,6 +45,14 @@ func (sk *SecureKey) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (s
 	return sk.key.Sign(nil, digest, opts)
 }
 
+func (sk *SecureKey) Encrypt(plaintext []byte) ([]byte, error) {
+	return sk.key.Encrypt(plaintext)
+}
+
+func (sk *SecureKey) Decrypt(ciphertext []byte) ([]byte, error) {
+	return sk.key.Decrypt(ciphertext)
+}
+
 // Close frees up resources associated with the underlying key.
 func (sk *SecureKey) Close() {
 	sk.key.Close()
