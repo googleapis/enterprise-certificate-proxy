@@ -67,10 +67,12 @@ type SignArgs struct {
 
 type EncryptArgs struct {
 	Plaintext []byte
+	Hash      crypto.Hash
 }
 
 type DecryptArgs struct {
 	Ciphertext []byte
+	Hash       crypto.Hash
 }
 
 // Key implements credential.Credential by holding the executed signer subprocess.
@@ -118,12 +120,12 @@ func (k *Key) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (signed [
 }
 
 func (k *Key) Encrypt(plaintext []byte) (ciphertext []byte, err error) {
-	err = k.client.Call(encryptAPI, EncryptArgs{Plaintext: plaintext}, &ciphertext)
+	err = k.client.Call(encryptAPI, EncryptArgs{Plaintext: plaintext, Hash: crypto.SHA256}, &ciphertext)
 	return
 }
 
 func (k *Key) Decrypt(ciphertext []byte) (plaintext []byte, err error) {
-	err = k.client.Call(decryptAPI, DecryptArgs{Ciphertext: ciphertext}, &plaintext)
+	err = k.client.Call(decryptAPI, DecryptArgs{Ciphertext: ciphertext, Hash: crypto.SHA256}, &plaintext)
 	return
 }
 

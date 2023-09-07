@@ -97,7 +97,7 @@ func TestClient_Sign(t *testing.T) {
 	}
 }
 
-func TestClient_Encrypt(t *testing.T) {
+func TestClientEncrypt(t *testing.T) {
 	key, err := Cred("testdata/certificate_config.json")
 	if err != nil {
 		t.Fatal(err)
@@ -110,7 +110,7 @@ func TestClient_Encrypt(t *testing.T) {
 	}
 }
 
-func TestClient_Decrypt(t *testing.T) {
+func TestClientDecrypt(t *testing.T) {
 	key, err := Cred("testdata/certificate_config.json")
 	if err != nil {
 		t.Fatal(err)

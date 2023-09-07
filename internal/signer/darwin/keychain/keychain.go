@@ -18,7 +18,7 @@
 package keychain
 
 /*
-#cgo CFLAGS: -mmacosx-version-min=10.14
+#cgo CFLAGS: -mmacosx-version-min=10.12
 #cgo LDFLAGS: -framework CoreFoundation -framework Security
 
 #include <CoreFoundation/CoreFoundation.h>
@@ -443,6 +443,10 @@ func certIn(xc *x509.Certificate, xcs []*x509.Certificate) bool {
 	}
 	return false
 }
+func (k *Key) WithHash(hash crypto.Hash) *Key {
+	k.hash = hash
+	return k
+}
 
 func (k *Key) getPaddingSize() int {
 	algorithms, algoErr := k.getEncryptAlgorithm()
@@ -490,6 +494,8 @@ func (k *Key) getRSAEncryptAlgorithm() (C.SecKeyAlgorithm, error) {
 			algorithms = rsaOAEPAlgorithms
 		} else if C.SecKeyIsAlgorithmSupported(k.publicKeyRef, C.kSecKeyOperationTypeEncrypt, C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA256) == 1 {
 			algorithms = rsaPKCS1v15Algorithms
+		} else {
+			return UNKNOWN_SECKEY_ALGORITHM, fmt.Errorf("unknown RSA argument. Only supports PSS, OAEP, and PKCS1v1.5 %T", pub)
 		}
 	default:
 		return UNKNOWN_SECKEY_ALGORITHM, fmt.Errorf("algorithm is unsupported. only RSA algorithms are supported. %T", pub)
@@ -514,6 +520,8 @@ func (k *Key) getRSADecryptAlgorithm() (C.SecKeyAlgorithm, error) {
 			algorithms = rsaOAEPAlgorithms
 		} else if C.SecKeyIsAlgorithmSupported(k.publicKeyRef, C.kSecKeyOperationTypeDecrypt, C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA256) == 1 {
 			algorithms = rsaPKCS1v15Algorithms
+		} else {
+			return UNKNOWN_SECKEY_ALGORITHM, fmt.Errorf("unknown RSA argument. Only supports PSS, OAEP, and PKCS1v1.5 %T", pub)
 		}
 	default:
 		return UNKNOWN_SECKEY_ALGORITHM, fmt.Errorf("algorithm is unsupported. only RSA algorithms are supported. %T", pub)

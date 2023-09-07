@@ -22,7 +22,7 @@ import (
 
 const TEST_CREDENTIALS = "TestIssuer"
 
-func TestClient_Encrypt(t *testing.T) {
+func TestClientEncrypt(t *testing.T) {
 	secureKey, err := keychain.Cred(TEST_CREDENTIALS)
 	if err != nil {
 		t.Errorf("Cred: got %v, want nil err", err)
@@ -36,7 +36,7 @@ func TestClient_Encrypt(t *testing.T) {
 	}
 }
 
-func TestClient_Decrypt(t *testing.T) {
+func TestClientDecrypt(t *testing.T) {
 	secureKey, err := keychain.Cred(TEST_CREDENTIALS)
 	if err != nil {
 		t.Errorf("Cred: got %v, want nil err", err)

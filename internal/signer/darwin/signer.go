@@ -58,10 +58,12 @@ type SignArgs struct {
 
 type EncryptArgs struct {
 	Plaintext []byte
+	Hash      crypto.Hash
 }
 
 type DecryptArgs struct {
 	Ciphertext []byte
+	Hash       crypto.Hash
 }
 
 // A EnterpriseCertSigner exports RPC methods for signing.
@@ -105,11 +107,13 @@ func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
 }
 
 func (k *EnterpriseCertSigner) Encrypt(args EncryptArgs, plaintext *[]byte) (err error) {
+	k.key.WithHash(args.Hash)
 	*plaintext, err = k.key.Encrypt(args.Plaintext)
 	return
 }
 
 func (k *EnterpriseCertSigner) Decrypt(args DecryptArgs, ciphertext *[]byte) (err error) {
+	k.key.WithHash(args.Hash)
 	*ciphertext, err = k.key.Decrypt(args.Ciphertext)
 	return
 }
