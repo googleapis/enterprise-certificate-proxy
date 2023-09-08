@@ -169,8 +169,8 @@ func (k *Key) Encrypt(data []byte) ([]byte, error) {
 	}
 	_, ok = publicKey.(*ecdsa.PublicKey)
 	if ok {
-		// TODO: implement encryption for ec keys
-		return nil, nil
+		// TODO: Implement encryption for ec keys - https://github.com/googleapis/enterprise-certificate-proxy/issues/95
+		return nil, errors.New("encrypt error: EC keys not yet supported")
 	}
 	return nil, errors.New("encrypt error: Unsupported key type")
 }
@@ -183,8 +183,8 @@ func (k *Key) Decrypt(encryptedData []byte) ([]byte, error) {
 	}
 	_, ok = publicKey.(*ecdsa.PublicKey)
 	if ok {
-		// TODO: implement decryption for ec keys
-		return nil, nil
+		// TODO: Implement decryption for ec keys - https://github.com/googleapis/enterprise-certificate-proxy/issues/95
+		return nil, errors.New("decrypt error: EC keys not yet supported")
 	}
 	return nil, errors.New("decrypt error: Unsupported key type")
 }

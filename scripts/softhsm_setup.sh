@@ -30,16 +30,6 @@ install_dependencies() {
   sudo apt install softhsm2 libp11-kit-dev gnutls-bin opensc
 }
 
-uninstall_dependencies() {
-  # Install PKCS #11 related dependencies.
-  # 1. softhsm2 is a software based HSM that implements the PKCS #11 spec.
-  # 2. libp11-kit-dev contains a shared library at we will use to interact with
-  # PKCS #11 device module, as well as pkcs11-tool which will be used for
-  # interacting with the PKCS #11 module.
-  # 3. gnutls-bin contains p11-tool which we will use to create PKCS #11 URIs.
-  sudo apt remove softhsm2 libp11-kit-dev gnutls-bin opensc
-}
-
 setup_pkcs11_module() {
   # Make softhsm2 discoverable by PKCS #11 tools.
   sudo mkdir -p /etc/pkcs11/modules && echo "module: /usr/lib/softhsm/libsofthsm2.so" | sudo tee -a /etc/pkcs11/modules/softhsm.module
@@ -79,20 +69,7 @@ EOF
   popd
 }
 
-cleanup_pkcs11() {
-  sudo rm -rvf /etc/pkcs11/modules
-  rm -rvf $HOME/.config/softhsm2
-}
-
 if [ $# -eq 0 ]; then
     install_dependencies
     setup_pkcs11_module
-    exit 0
-elif [ $1 == "--cleanup" ]; then
-    uninstall_dependencies
-    cleanup_pkcs11
-    exit 0
-else
-  echo 'Run script with no arguments to set up PKCS #11. Set the "--cleanup" flag to cleanup the installed PKCS #11 artifacts.'
-  exit 1
 fi
