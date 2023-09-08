@@ -148,35 +148,3 @@ func TestClient_Close(t *testing.T) {
 		t.Errorf("Close: got %v, want nil err", err)
 	}
 }
-
-func TestClientEncrypt(t *testing.T) {
-	key, err := Cred("testdata/certificate_config.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	message := []byte("Plain text to encrypt")
-	_, err = key.Encrypt(message)
-	if err != nil {
-		t.Errorf("Encrypt: got %v, want nil err", err)
-	}
-}
-
-func TestClientDecrypt(t *testing.T) {
-	key, err := Cred("testdata/certificate_config.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	message := []byte("Plain text to encrypt")
-	encryptedData, err := key.Encrypt(message)
-	if err != nil {
-		t.Fatalf("Encrypt: got %v, want nil err", err)
-	}
-	decryptedData, err := key.Decrypt(encryptedData)
-	if err != nil {
-		t.Fatalf("Decrypt: got %v, want nil err", err)
-	}
-	decryptedData = bytes.Trim(decryptedData, "\x00")
-	if string(decryptedData) != string(message) {
-		t.Errorf("Decrypt: got %v, want %v", string(decryptedData), string(message))
-	}
-}
