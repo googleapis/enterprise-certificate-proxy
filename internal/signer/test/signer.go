@@ -87,13 +87,13 @@ func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
 	return nil
 }
 
-func (k *EnterpriseCertSigner) Encrypt(args EncryptArgs, encryptedData *[]byte) (err error) {
-	*encryptedData = args.Plaintext
+func (k *EnterpriseCertSigner) Encrypt(args EncryptArgs, plaintext *[]byte) (err error) {
+	*plaintext = args.Plaintext
 	return nil
 }
 
-func (k *EnterpriseCertSigner) Decrypt(args DecryptArgs, decryptedData *[]byte) (err error) {
-	*decryptedData = args.Ciphertext
+func (k *EnterpriseCertSigner) Decrypt(args DecryptArgs, ciphertext *[]byte) (err error) {
+	*ciphertext = args.Ciphertext
 	return nil
 }
 

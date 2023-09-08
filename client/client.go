@@ -119,13 +119,13 @@ func (k *Key) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (signed [
 	return
 }
 
-func (k *Key) Encrypt(data []byte) (encryptedData []byte, err error) {
-	err = k.client.Call(encryptAPI, EncryptArgs{Plaintext: data}, &encryptedData)
+func (k *Key) Encrypt(plaintext []byte) (ciphertext []byte, err error) {
+	err = k.client.Call(encryptAPI, EncryptArgs{Plaintext: plaintext, Hash: crypto.SHA256}, &ciphertext)
 	return
 }
 
-func (k *Key) Decrypt(encryptedData []byte) (decryptedData []byte, err error) {
-	err = k.client.Call(decryptAPI, DecryptArgs{Ciphertext: encryptedData}, &decryptedData)
+func (k *Key) Decrypt(ciphertext []byte) (plaintext []byte, err error) {
+	err = k.client.Call(decryptAPI, DecryptArgs{Ciphertext: ciphertext, Hash: crypto.SHA256}, &plaintext)
 	return
 }
 
