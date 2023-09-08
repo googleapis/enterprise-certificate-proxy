@@ -57,6 +57,16 @@ type SignArgs struct {
 	Opts   crypto.SignerOpts // Options for signing, such as Hash identifier.
 }
 
+type EncryptArgs struct {
+	Plaintext []byte
+	Hash      crypto.Hash
+}
+
+type DecryptArgs struct {
+	Ciphertext []byte
+	Hash       crypto.Hash
+}
+
 // A EnterpriseCertSigner exports RPC methods for signing.
 type EnterpriseCertSigner struct {
 	key *pkcs11.Key
@@ -97,6 +107,18 @@ func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
 	return
 }
 
+func (k *EnterpriseCertSigner) Encrypt(args EncryptArgs, encryptedData *[]byte) (err error) {
+	k.key = k.key.WithHash(args.Hash)
+	*encryptedData, err = k.key.Encrypt(args.Plaintext)
+	return
+}
+
+func (k *EnterpriseCertSigner) Decrypt(args DecryptArgs, decryptedData *[]byte) (err error) {
+	k.key = k.key.WithHash(args.Hash)
+	*decryptedData, err = k.key.Decrypt(args.Ciphertext)
+	return
+}
+
 func main() {
 	enableECPLogging()
 	if len(os.Args) != 2 {
@@ -113,6 +135,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize enterprise cert signer using pkcs11: %v", err)
 	}
+	enterpriseCertSigner.key = enterpriseCertSigner.key.WithHash(crypto.SHA1)
 
 	if err := rpc.Register(enterpriseCertSigner); err != nil {
 		log.Fatalf("Failed to register enterprise cert signer with net/rpc: %v", err)
