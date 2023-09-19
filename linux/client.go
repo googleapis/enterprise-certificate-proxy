@@ -42,6 +42,16 @@ func (sk *SecureKey) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (s
 	return sk.key.Sign(nil, digest, opts)
 }
 
+// Encrypt encrypts a plaintext message digest.
+func (sk *SecureKey) Encrypt(plaintext []byte) ([]byte, error) {
+	return sk.key.Encrypt(plaintext)
+}
+
+// Decrypt decrypts a ciphertext message digest.
+func (sk *SecureKey) Decrypt(ciphertext []byte) ([]byte, error) {
+	return sk.key.Decrypt(ciphertext)
+}
+
 // Close frees up resources associated with the underlying key.
 func (sk *SecureKey) Close() {
 	sk.key.Close()
@@ -55,12 +65,4 @@ func NewSecureKey(pkcs11Module string, slotUint32Str string, label string, userP
 		return nil, err
 	}
 	return &SecureKey{key: k}, nil
-}
-
-func (sk *SecureKey) Encrypt(data []byte) ([]byte, error) {
-	return sk.key.Encrypt(data)
-}
-
-func (sk *SecureKey) Decrypt(encryptedData []byte) ([]byte, error) {
-	return sk.key.Decrypt(encryptedData)
 }

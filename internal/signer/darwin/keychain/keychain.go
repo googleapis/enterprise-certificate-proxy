@@ -533,6 +533,7 @@ func (k *Key) getDecryptAlgorithm() (C.SecKeyAlgorithm, error) {
 	return k.getRSADecryptAlgorithm()
 }
 
+// Encrypt encrypts a plaintext message digest using the public key. Here, we pass off the encryption to Keychain library.
 func (k *Key) Encrypt(plaintext []byte) ([]byte, error) {
 	pub := k.publicKeyRef
 	algorithm, err := k.getEncryptAlgorithm()
@@ -554,6 +555,7 @@ func (k *Key) Encrypt(plaintext []byte) ([]byte, error) {
 	return ciphertext, cfErrorFromRef(cfErr)
 }
 
+// Decrypt decrypts a ciphertext message digest using the private key. Here, we pass off the decryption to Keychain library.
 func (k *Key) Decrypt(ciphertext []byte) ([]byte, error) {
 	priv := k.privateKeyRef
 	algorithm, err := k.getDecryptAlgorithm()

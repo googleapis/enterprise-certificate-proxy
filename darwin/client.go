@@ -45,10 +45,12 @@ func (sk *SecureKey) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (s
 	return sk.key.Sign(nil, digest, opts)
 }
 
+// Encrypt encrypts a plaintext message digest.
 func (sk *SecureKey) Encrypt(plaintext []byte) ([]byte, error) {
 	return sk.key.Encrypt(plaintext)
 }
 
+// Decrypt decrypts a ciphertext message digest.
 func (sk *SecureKey) Decrypt(ciphertext []byte) ([]byte, error) {
 	return sk.key.Decrypt(ciphertext)
 }

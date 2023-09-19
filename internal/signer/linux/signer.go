@@ -57,11 +57,13 @@ type SignArgs struct {
 	Opts   crypto.SignerOpts // Options for signing, such as Hash identifier.
 }
 
+// EncryptArgs contains arguments to a Encrypt method.
 type EncryptArgs struct {
 	Plaintext []byte
 	Hash      crypto.Hash
 }
 
+// DecryptArgs contains arguments to a Decrypt method.
 type DecryptArgs struct {
 	Ciphertext []byte
 	Hash       crypto.Hash
@@ -101,21 +103,23 @@ func (k *EnterpriseCertSigner) Public(ignored struct{}, publicKey *[]byte) (err 
 	return
 }
 
-// Sign signs a message digest.
+// Sign signs a message digest. Stores result in "resp".
 func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
 	*resp, err = k.key.Sign(nil, args.Digest, args.Opts)
 	return
 }
 
-func (k *EnterpriseCertSigner) Encrypt(args EncryptArgs, encryptedData *[]byte) (err error) {
+// Encrypt encrypts a plaintext message digest. Stores result in "resp".
+func (k *EnterpriseCertSigner) Encrypt(args EncryptArgs, resp *[]byte) (err error) {
 	k.key = k.key.WithHash(args.Hash)
-	*encryptedData, err = k.key.Encrypt(args.Plaintext)
+	*resp, err = k.key.Encrypt(args.Plaintext)
 	return
 }
 
-func (k *EnterpriseCertSigner) Decrypt(args DecryptArgs, decryptedData *[]byte) (err error) {
+// Decrypt decrypts a ciphertext message digest. Stores result in "resp".
+func (k *EnterpriseCertSigner) Decrypt(args DecryptArgs, resp *[]byte) (err error) {
 	k.key = k.key.WithHash(args.Hash)
-	*decryptedData, err = k.key.Decrypt(args.Ciphertext)
+	*resp, err = k.key.Decrypt(args.Ciphertext)
 	return
 }
 
