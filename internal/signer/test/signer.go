@@ -17,14 +17,24 @@ package main
 
 import (
 	"crypto"
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/gob"
 	"io"
 	"log"
 	"net/rpc"
 	"os"
 	"time"
 )
+
+func init() {
+	gob.Register(crypto.SHA256)
+	gob.Register(crypto.SHA384)
+	gob.Register(crypto.SHA512)
+	gob.Register(&rsa.PSSOptions{})
+	gob.Register(&rsa.OAEPOptions{})
+}
 
 // SignArgs encapsulate the parameters for the Sign method.
 type SignArgs struct {

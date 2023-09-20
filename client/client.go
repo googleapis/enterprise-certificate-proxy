@@ -56,7 +56,10 @@ func (c *Connection) Close() error {
 
 func init() {
 	gob.Register(crypto.SHA256)
+	gob.Register(crypto.SHA384)
+	gob.Register(crypto.SHA512)
 	gob.Register(&rsa.PSSOptions{})
+	gob.Register(&rsa.OAEPOptions{})
 }
 
 // SignArgs contains arguments for a Sign API call.
