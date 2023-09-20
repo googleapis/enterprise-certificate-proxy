@@ -16,6 +16,7 @@ package pkcs11
 import (
 	"bytes"
 	"crypto"
+	"crypto/rsa"
 	"flag"
 	"testing"
 )
@@ -88,7 +89,7 @@ func TestEncrypt(t *testing.T) {
 	defer key.Close()
 	msg := "Plain text to encrypt"
 	bMsg := []byte(msg)
-	_, err := key.Encrypt(bMsg)
+	_, err := key.Encrypt(bMsg, crypto.SHA256)
 	if err != nil {
 		t.Errorf("Encrypt error: %q", err)
 	}
@@ -105,11 +106,11 @@ func TestDecrypt(t *testing.T) {
 	bMsg := []byte(msg)
 	// Softhsm only supports SHA1
 	key = key.WithHash(crypto.SHA1)
-	ciphertext, err := key.Encrypt(bMsg)
+	ciphertext, err := key.Encrypt(bMsg, crypto.SHA256)
 	if err != nil {
 		t.Errorf("Encrypt error: %q", err)
 	}
-	decrypted, err := key.Decrypt(ciphertext)
+	decrypted, err := key.Decrypt(ciphertext, &rsa.OAEPOptions{Hash: crypto.SHA256})
 	if err != nil {
 		t.Fatalf("Decrypt error: %v", err)
 	}

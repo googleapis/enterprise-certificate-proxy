@@ -162,7 +162,12 @@ func (k *Key) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, 
 }
 
 // Encrypt encrypts a plaintext message digest using the public key. Here, we use standard golang API.
-func (k *Key) Encrypt(plaintext []byte) ([]byte, error) {
+func (k *Key) Encrypt(plaintext []byte, opts any) ([]byte, error) {
+	if hash, ok := opts.(crypto.Hash); ok {
+		k.hash = hash
+	} else {
+		return nil, fmt.Errorf("Unsupported encrypt opts: %v", opts)
+	}
 	publicKey := k.Public()
 	_, ok := publicKey.(*rsa.PublicKey)
 	if ok {
@@ -177,11 +182,16 @@ func (k *Key) Encrypt(plaintext []byte) ([]byte, error) {
 }
 
 // Decrypt decrypts a ciphertext message digest using the private key. Here, we pass off the decryption to pkcs11 library.
-func (k *Key) Decrypt(ciphertext []byte) ([]byte, error) {
+func (k *Key) Decrypt(msg []byte, opts crypto.DecrypterOpts) ([]byte, error) {
+	if oaepOpts, ok := opts.(*rsa.OAEPOptions); ok {
+		k.hash = oaepOpts.Hash
+	} else {
+		return nil, fmt.Errorf("Unsupported DecrypterOpts: %v", opts)
+	}
 	publicKey := k.Public()
 	_, ok := publicKey.(*rsa.PublicKey)
 	if ok {
-		return k.decryptRSAWithPKCS11(ciphertext)
+		return k.decryptRSAWithPKCS11(msg)
 	}
 	_, ok = publicKey.(*ecdsa.PublicKey)
 	if ok {

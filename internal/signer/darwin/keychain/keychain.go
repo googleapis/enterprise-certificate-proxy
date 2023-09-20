@@ -534,7 +534,12 @@ func (k *Key) getDecryptAlgorithm() (C.SecKeyAlgorithm, error) {
 }
 
 // Encrypt encrypts a plaintext message digest using the public key. Here, we pass off the encryption to Keychain library.
-func (k *Key) Encrypt(plaintext []byte) ([]byte, error) {
+func (k *Key) Encrypt(plaintext []byte, opts any) ([]byte, error) {
+	if hash, ok := opts.(crypto.Hash); ok {
+		k.hash = hash
+	} else {
+		return nil, fmt.Errorf("Unsupported encrypt opts: %v", opts)
+	}
 	pub := k.publicKeyRef
 	algorithm, err := k.getEncryptAlgorithm()
 	if err != nil {
@@ -556,7 +561,13 @@ func (k *Key) Encrypt(plaintext []byte) ([]byte, error) {
 }
 
 // Decrypt decrypts a ciphertext message digest using the private key. Here, we pass off the decryption to Keychain library.
-func (k *Key) Decrypt(ciphertext []byte) ([]byte, error) {
+// Currently, only *rsa.OAEPOptions is supported for opts.
+func (k *Key) Decrypt(ciphertext []byte, opts crypto.DecrypterOpts) ([]byte, error) {
+	if oaepOpts, ok := opts.(*rsa.OAEPOptions); ok {
+		k.hash = oaepOpts.Hash
+	} else {
+		return nil, fmt.Errorf("Unsupported DecrypterOpts: %v", opts)
+	}
 	priv := k.privateKeyRef
 	algorithm, err := k.getDecryptAlgorithm()
 	if err != nil {

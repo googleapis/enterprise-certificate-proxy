@@ -51,22 +51,22 @@ func init() {
 	gob.Register(&rsa.PSSOptions{})
 }
 
-// SignArgs contains arguments to a crypto Signer.Sign method.
+// SignArgs contains arguments for a Sign API call.
 type SignArgs struct {
 	Digest []byte            // The content to sign.
-	Opts   crypto.SignerOpts // Options for signing, such as Hash identifier.
+	Opts   crypto.SignerOpts // Options for signing. Must implement HashFunc().
 }
 
-// EncryptArgs contains arguments to a Encrypt method.
+// EncryptArgs contains arguments for an Encrypt API call.
 type EncryptArgs struct {
-	Plaintext []byte
-	Hash      crypto.Hash
+	Plaintext []byte // The plaintext to encrypt.
+	Opts      any    // Options for encryption. Ex: an instance of crypto.Hash.
 }
 
-// DecryptArgs contains arguments to a Decrypt method.
+// DecryptArgs contains arguments to for a Decrypt API call.
 type DecryptArgs struct {
-	Ciphertext []byte
-	Hash       crypto.Hash
+	Ciphertext []byte               // The ciphertext to decrypt.
+	Opts       crypto.DecrypterOpts // Options for decryption. Ex: an instance of *rsa.OAEPOptions.
 }
 
 // A EnterpriseCertSigner exports RPC methods for signing.
@@ -109,17 +109,15 @@ func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
 	return
 }
 
-// Encrypt encrypts a plaintext message digest. Stores result in "resp".
+// Encrypt encrypts a plaintext msg. Stores result in "resp".
 func (k *EnterpriseCertSigner) Encrypt(args EncryptArgs, resp *[]byte) (err error) {
-	k.key = k.key.WithHash(args.Hash)
-	*resp, err = k.key.Encrypt(args.Plaintext)
+	*resp, err = k.key.Encrypt(args.Plaintext, args.Opts)
 	return
 }
 
-// Decrypt decrypts a ciphertext message digest. Stores result in "resp".
+// Decrypt decrypts a ciphertext msg. Stores result in "resp".
 func (k *EnterpriseCertSigner) Decrypt(args DecryptArgs, resp *[]byte) (err error) {
-	k.key = k.key.WithHash(args.Hash)
-	*resp, err = k.key.Decrypt(args.Ciphertext)
+	*resp, err = k.key.Decrypt(args.Ciphertext, args.Opts)
 	return
 }
 

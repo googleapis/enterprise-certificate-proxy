@@ -59,20 +59,22 @@ func init() {
 	gob.Register(&rsa.PSSOptions{})
 }
 
-// SignArgs contains arguments to a crypto Signer.Sign method.
+// SignArgs contains arguments for a Sign API call.
 type SignArgs struct {
 	Digest []byte            // The content to sign.
-	Opts   crypto.SignerOpts // Options for signing, such as Hash identifier.
+	Opts   crypto.SignerOpts // Options for signing. Must implement HashFunc().
 }
 
+// EncryptArgs contains arguments for an Encrypt API call.
 type EncryptArgs struct {
-	Plaintext []byte
-	Hash      crypto.Hash
+	Plaintext []byte // The plaintext to encrypt.
+	Opts      any    // Options for encryption. Ex: an instance of crypto.Hash.
 }
 
+// DecryptArgs contains arguments to for a Decrypt API call.
 type DecryptArgs struct {
-	Ciphertext []byte
-	Hash       crypto.Hash
+	Ciphertext []byte               // The ciphertext to decrypt.
+	Opts       crypto.DecrypterOpts // Options for decryption. Ex: an instance of *rsa.OAEPOptions.
 }
 
 // Key implements credential.Credential by holding the executed signer subprocess.
@@ -110,7 +112,7 @@ func (k *Key) Public() crypto.PublicKey {
 	return k.publicKey
 }
 
-// Sign signs a message digest, using the specified signer options.
+// Sign signs a message digest, using the specified signer opts. Implements crypto.Signer interface.
 func (k *Key) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (signed []byte, err error) {
 	if opts != nil && opts.HashFunc() != 0 && len(digest) != opts.HashFunc().Size() {
 		return nil, fmt.Errorf("Digest length of %v bytes does not match Hash function size of %v bytes", len(digest), opts.HashFunc().Size())
@@ -119,13 +121,15 @@ func (k *Key) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (signed [
 	return
 }
 
-func (k *Key) Encrypt(plaintext []byte) (ciphertext []byte, err error) {
-	err = k.client.Call(encryptAPI, EncryptArgs{Plaintext: plaintext, Hash: crypto.SHA256}, &ciphertext)
+// Encrypt encrypts a plaintext msg into ciphertext, using the specified encrypt opts.
+func (k *Key) Encrypt(_ io.Reader, msg []byte, opts any) (ciphertext []byte, err error) {
+	err = k.client.Call(encryptAPI, EncryptArgs{Plaintext: msg, Opts: opts}, &ciphertext)
 	return
 }
 
-func (k *Key) Decrypt(ciphertext []byte) (plaintext []byte, err error) {
-	err = k.client.Call(decryptAPI, DecryptArgs{Ciphertext: ciphertext, Hash: crypto.SHA256}, &plaintext)
+// Decrypt decrypts a ciphertext msg into plaintext, using the specified decrypter opts. Implements crypto.Decrypter interface.
+func (k *Key) Decrypt(_ io.Reader, msg []byte, opts crypto.DecrypterOpts) (plaintext []byte, err error) {
+	err = k.client.Call(decryptAPI, DecryptArgs{Ciphertext: msg, Opts: opts}, &plaintext)
 	return
 }
 
