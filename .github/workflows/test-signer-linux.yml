@@ -13,8 +13,11 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Bootstrap SoftHSM Credentials
+      run: ./scripts/softhsm_setup.sh
+
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version: 1.19
 
@@ -24,7 +27,7 @@ jobs:
 
     - name: Test
       working-directory: ./internal/signer/linux
-      run: go test -v ./...
+      run: go test -v ./... -testSlot=$(pkcs11-tool --list-slots --module "/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so" | grep -Eo "0x[A-Fa-f0-9]+" | head -n 1)
 
     - name: Lint
       uses: golangci/golangci-lint-action@v3

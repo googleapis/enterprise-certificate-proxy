@@ -49,6 +49,9 @@ var (
 		crypto.SHA384: C.kSecKeyAlgorithmECDSASignatureDigestX962SHA384,
 		crypto.SHA512: C.kSecKeyAlgorithmECDSASignatureDigestX962SHA512,
 	}
+	rsaRaw = map[crypto.Hash]C.CFStringRef{
+		crypto.SHA256: C.kSecKeyAlgorithmRSAEncryptionRaw,
+	}
 	rsaPKCS1v15Algorithms = map[crypto.Hash]C.CFStringRef{
 		crypto.SHA256: C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA256,
 		crypto.SHA384: C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA384,
@@ -59,7 +62,15 @@ var (
 		crypto.SHA384: C.kSecKeyAlgorithmRSASignatureDigestPSSSHA384,
 		crypto.SHA512: C.kSecKeyAlgorithmRSASignatureDigestPSSSHA512,
 	}
+	rsaOAEPAlgorithms = map[crypto.Hash]C.CFStringRef{
+		crypto.SHA256: C.kSecKeyAlgorithmRSAEncryptionOAEPSHA256,
+		crypto.SHA384: C.kSecKeyAlgorithmRSAEncryptionOAEPSHA384,
+		crypto.SHA512: C.kSecKeyAlgorithmRSAEncryptionOAEPSHA512,
+	}
 )
+
+const UNKNOWN_SECKEY_ALGORITHM = C.CFStringRef(0)
+const INVALID_KEY = C.SecKeyRef(0)
 
 // cfStringToString returns a Go string given a CFString.
 func cfStringToString(cfStr C.CFStringRef) string {
@@ -91,7 +102,7 @@ type cfError struct {
 
 // cfErrorFromRef converts a C.CFErrorRef to a cfError, taking ownership of the
 // reference and releasing when the value is finalized.
-func cfErrorFromRef(cfErr C.CFErrorRef) *cfError {
+func cfErrorFromRef(cfErr C.CFErrorRef) error {
 	if cfErr == 0 {
 		return nil
 	}
@@ -141,20 +152,25 @@ type Key struct {
 	privateKeyRef C.SecKeyRef
 	certs         []*x509.Certificate
 	once          sync.Once
+	publicKeyRef  C.SecKeyRef
+	hash          crypto.Hash
 }
 
 // newKey makes a new Key wrapper around the key reference,
 // takes ownership of the reference, and sets up a finalizer to handle releasing
 // the reference.
-func newKey(privateKeyRef C.SecKeyRef, certs []*x509.Certificate) (*Key, error) {
+func newKey(privateKeyRef C.SecKeyRef, certs []*x509.Certificate, publicKeyRef C.SecKeyRef) (*Key, error) {
 	k := &Key{
 		privateKeyRef: privateKeyRef,
 		certs:         certs,
+		publicKeyRef:  publicKeyRef,
+		hash:          crypto.SHA256,
 	}
 
 	// This struct now owns the key reference. Retain now and release on
 	// finalise in case the credential gets forgotten about.
 	C.CFRetain(C.CFTypeRef(privateKeyRef))
+	C.CFRetain(C.CFTypeRef(publicKeyRef))
 	runtime.SetFinalizer(k, func(x interface{}) {
 		x.(*Key).Close()
 	})
@@ -176,6 +192,7 @@ func (k *Key) Close() error {
 	// Don't double-release references.
 	k.once.Do(func() {
 		C.CFRelease(C.CFTypeRef(k.privateKeyRef))
+		C.CFRelease(C.CFTypeRef(k.publicKeyRef))
 	})
 	return nil
 }
@@ -310,12 +327,17 @@ func Cred(issuerCN string) (*Key, error) {
 		return nil, fmt.Errorf("no key found with issuer common name %q", issuerCN)
 	}
 
-	skr, err := identityToSecKeyRef(leafIdent)
+	skr, err := identityToPrivateSecKeyRef(leafIdent)
+
+	if err != nil {
+		return nil, err
+	}
+	pubKey, err := identityToPublicSecKeyRef(leafIdent)
 	if err != nil {
 		return nil, err
 	}
 	defer C.CFRelease(C.CFTypeRef(skr))
-	return newKey(skr, certs)
+	return newKey(skr, certs, pubKey)
 }
 
 // identityToX509 converts a single CFDictionary that contains the item ref and
@@ -376,7 +398,7 @@ func certRefToX509(certRef C.SecCertificateRef) (*x509.Certificate, error) {
 
 // identityToSecKeyRef converts a single CFDictionary that contains the item ref and
 // attribute dictionary into a SecKeyRef for its private key.
-func identityToSecKeyRef(ident C.SecIdentityRef) (C.SecKeyRef, error) {
+func identityToPrivateSecKeyRef(ident C.SecIdentityRef) (C.SecKeyRef, error) {
 	// Get the private key (ref). Note that "Copy" in "CopyPrivateKey"
 	// refers to "the create rule" of CoreFoundation memory management, and
 	// does not actually copy the private key---it gives us a copy of the
@@ -386,6 +408,22 @@ func identityToSecKeyRef(ident C.SecIdentityRef) (C.SecKeyRef, error) {
 		return 0, keychainError(errno)
 	}
 	return ref, nil
+}
+
+func identityToPublicSecKeyRef(ident C.SecIdentityRef) (C.SecKeyRef, error) {
+	var key C.SecKeyRef
+	var certRef C.SecCertificateRef
+	if errno := C.SecIdentityCopyCertificate(ident, &certRef); errno != 0 {
+		return 0, keychainError(errno)
+	}
+	defer C.CFRelease(C.CFTypeRef(certRef))
+
+	key = C.SecCertificateCopyKey(certRef)
+
+	if key == INVALID_KEY {
+		return 0, fmt.Errorf("public key was NULL. Key might have an encoding issue or use an unsupported algorithm")
+	}
+	return key, nil
 }
 
 func stringIn(s string, ss []string) bool {
@@ -404,4 +442,145 @@ func certIn(xc *x509.Certificate, xcs []*x509.Certificate) bool {
 		}
 	}
 	return false
+}
+func (k *Key) WithHash(hash crypto.Hash) *Key {
+	k.hash = hash
+	return k
+}
+
+func (k *Key) getPaddingSize() int {
+	algorithms, algoErr := k.getEncryptAlgorithm()
+	if algoErr != nil {
+		fmt.Printf("algorithm is unsupported. only RSA algorithms are supported. %v", algoErr)
+	}
+	// Each padding scheme has varying number of bytes.
+	pssPaddingBytes := 20
+	oaepPaddingBytes := 130
+	pkcsPaddingBytes := 11
+	switch algorithms {
+	case C.kSecKeyAlgorithmRSASignatureDigestPSSSHA256,
+		C.kSecKeyAlgorithmRSASignatureDigestPSSSHA384,
+		C.kSecKeyAlgorithmRSASignatureDigestPSSSHA512:
+		return pssPaddingBytes
+	case C.kSecKeyAlgorithmRSAEncryptionOAEPSHA256,
+		C.kSecKeyAlgorithmRSAEncryptionOAEPSHA384,
+		C.kSecKeyAlgorithmRSAEncryptionOAEPSHA512:
+		return oaepPaddingBytes
+	case C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA256,
+		C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA384,
+		C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA512:
+		return pkcsPaddingBytes
+	default:
+		return int(UNKNOWN_SECKEY_ALGORITHM)
+	}
+}
+
+func (k *Key) checkDataSize(plaintext []byte) error {
+	// Plaintext data must be smaller than the key's block size minus padding space.
+	sizeLim := uint64(C.SecKeyGetBlockSize(k.publicKeyRef)) - uint64(k.getPaddingSize())
+	if uint64(len(plaintext)) >= sizeLim {
+		return fmt.Errorf("plaintext is too long")
+	}
+	return nil
+}
+
+func (k *Key) getRSAEncryptAlgorithm() (C.SecKeyAlgorithm, error) {
+	var algorithms map[crypto.Hash]C.CFStringRef
+	switch pub := k.Public().(type) {
+	case *rsa.PublicKey:
+		if C.SecKeyIsAlgorithmSupported(k.publicKeyRef, C.kSecKeyOperationTypeEncrypt, C.kSecKeyAlgorithmRSASignatureDigestPSSSHA256) == 1 {
+			algorithms = rsaPSSAlgorithms
+		} else if C.SecKeyIsAlgorithmSupported(k.publicKeyRef, C.kSecKeyOperationTypeEncrypt, C.kSecKeyAlgorithmRSAEncryptionOAEPSHA256) == 1 {
+			algorithms = rsaOAEPAlgorithms
+		} else if C.SecKeyIsAlgorithmSupported(k.publicKeyRef, C.kSecKeyOperationTypeEncrypt, C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA256) == 1 {
+			algorithms = rsaPKCS1v15Algorithms
+		} else {
+			return UNKNOWN_SECKEY_ALGORITHM, fmt.Errorf("unknown RSA argument. Only supports PSS, OAEP, and PKCS1v1.5 %T", pub)
+		}
+	default:
+		return UNKNOWN_SECKEY_ALGORITHM, fmt.Errorf("algorithm is unsupported. only RSA algorithms are supported. %T", pub)
+	}
+	return algorithms[k.hash], nil
+}
+
+func (k *Key) getEncryptAlgorithm() (C.SecKeyAlgorithm, error) {
+	if k.hash == 0 {
+		k.hash = crypto.SHA256
+	}
+	return k.getRSAEncryptAlgorithm()
+}
+
+func (k *Key) getRSADecryptAlgorithm() (C.SecKeyAlgorithm, error) {
+	var algorithms map[crypto.Hash]C.CFStringRef
+	switch pub := k.Public().(type) {
+	case *rsa.PublicKey:
+		if C.SecKeyIsAlgorithmSupported(k.publicKeyRef, C.kSecKeyOperationTypeDecrypt, C.kSecKeyAlgorithmRSASignatureDigestPSSSHA256) == 1 {
+			algorithms = rsaPSSAlgorithms
+		} else if C.SecKeyIsAlgorithmSupported(k.publicKeyRef, C.kSecKeyOperationTypeDecrypt, C.kSecKeyAlgorithmRSAEncryptionOAEPSHA256) == 1 {
+			algorithms = rsaOAEPAlgorithms
+		} else if C.SecKeyIsAlgorithmSupported(k.publicKeyRef, C.kSecKeyOperationTypeDecrypt, C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA256) == 1 {
+			algorithms = rsaPKCS1v15Algorithms
+		} else {
+			return UNKNOWN_SECKEY_ALGORITHM, fmt.Errorf("unknown RSA argument. Only supports PSS, OAEP, and PKCS1v1.5 %T", pub)
+		}
+	default:
+		return UNKNOWN_SECKEY_ALGORITHM, fmt.Errorf("algorithm is unsupported. only RSA algorithms are supported. %T", pub)
+	}
+	return algorithms[k.hash], nil
+}
+
+func (k *Key) getDecryptAlgorithm() (C.SecKeyAlgorithm, error) {
+	return k.getRSADecryptAlgorithm()
+}
+
+// Encrypt encrypts a plaintext message digest using the public key. Here, we pass off the encryption to Keychain library.
+func (k *Key) Encrypt(plaintext []byte, opts any) ([]byte, error) {
+	if hash, ok := opts.(crypto.Hash); ok {
+		k.hash = hash
+	} else {
+		return nil, fmt.Errorf("Unsupported encrypt opts: %v", opts)
+	}
+	pub := k.publicKeyRef
+	algorithm, err := k.getEncryptAlgorithm()
+	if err != nil {
+		return nil, err
+	}
+	if err := k.checkDataSize(plaintext); err != nil {
+		return nil, err
+	}
+	msg := bytesToCFData(plaintext)
+	var cfErr C.CFErrorRef
+	bytes := C.SecKeyCreateEncryptedData(pub, algorithm, msg, &cfErr)
+
+	if cfErr != 0 {
+		return nil, cfErrorFromRef(cfErr)
+	}
+
+	ciphertext := cfDataToBytes(bytes)
+	return ciphertext, cfErrorFromRef(cfErr)
+}
+
+// Decrypt decrypts a ciphertext message digest using the private key. Here, we pass off the decryption to Keychain library.
+// Currently, only *rsa.OAEPOptions is supported for opts.
+func (k *Key) Decrypt(ciphertext []byte, opts crypto.DecrypterOpts) ([]byte, error) {
+	if oaepOpts, ok := opts.(*rsa.OAEPOptions); ok {
+		k.hash = oaepOpts.Hash
+	} else {
+		return nil, fmt.Errorf("Unsupported DecrypterOpts: %v", opts)
+	}
+	priv := k.privateKeyRef
+	algorithm, err := k.getDecryptAlgorithm()
+	if err != nil {
+		return nil, err
+	}
+	msg := bytesToCFData(ciphertext)
+	var cfErr C.CFErrorRef
+	bytes := C.SecKeyCreateDecryptedData(priv, algorithm, msg, &cfErr)
+
+	if cfErr != 0 {
+		return nil, cfErrorFromRef(cfErr)
+	}
+
+	plaintext := cfDataToBytes(bytes)
+	return plaintext, cfErrorFromRef(cfErr)
 }
