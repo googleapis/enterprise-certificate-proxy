@@ -216,11 +216,6 @@ func (k *Key) decryptRSAWithPKCS11(encryptedData []byte) ([]byte, error) {
 	return k.decrypter.Decrypt(nil, encryptedData, opts)
 }
 
-func (k *Key) WithHash(hash crypto.Hash) *Key {
-	k.hash = hash
-	return k
-}
-
 func cryptoHashToHash(hash crypto.Hash) (hash.Hash, error) {
 	switch hash {
 	case crypto.SHA256:

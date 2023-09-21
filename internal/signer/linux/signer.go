@@ -138,7 +138,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize enterprise cert signer using pkcs11: %v", err)
 	}
-	enterpriseCertSigner.key = enterpriseCertSigner.key.WithHash(crypto.SHA1)
 
 	if err := rpc.Register(enterpriseCertSigner); err != nil {
 		log.Fatalf("Failed to register enterprise cert signer with net/rpc: %v", err)

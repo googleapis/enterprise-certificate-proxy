@@ -17,10 +17,8 @@ package main
 
 import (
 	"crypto"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/gob"
 	"io"
 	"log"
 	"net/rpc"
@@ -28,24 +26,18 @@ import (
 	"time"
 )
 
-func init() {
-	gob.Register(crypto.SHA256)
-	gob.Register(crypto.SHA384)
-	gob.Register(crypto.SHA512)
-	gob.Register(&rsa.PSSOptions{})
-	gob.Register(&rsa.OAEPOptions{})
-}
-
 // SignArgs encapsulate the parameters for the Sign method.
 type SignArgs struct {
 	Digest []byte
 	Opts   crypto.SignerOpts
 }
 
+// EncryptArgs encapsulate the parameters for the Encrypt method.
 type EncryptArgs struct {
 	Plaintext []byte
 }
 
+// DecryptArgs encapsulate the parameters for the Decrypt method.
 type DecryptArgs struct {
 	Ciphertext []byte
 }
@@ -91,17 +83,19 @@ func (k *EnterpriseCertSigner) Public(ignored struct{}, publicKey *[]byte) (err 
 	return err
 }
 
-// Sign signs a message digest.
+// Sign signs a message digest. For testing, we return the input as-is.
 func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
 	*resp = args.Digest
 	return nil
 }
 
+// Encrypt encrypts a plaintext msg. For testing, we return the input as-is.
 func (k *EnterpriseCertSigner) Encrypt(args EncryptArgs, plaintext *[]byte) (err error) {
 	*plaintext = args.Plaintext
 	return nil
 }
 
+// Decrypt decrypts a ciphertext msg. For testing, we return the input as-is.
 func (k *EnterpriseCertSigner) Decrypt(args DecryptArgs, ciphertext *[]byte) (err error) {
 	*ciphertext = args.Ciphertext
 	return nil

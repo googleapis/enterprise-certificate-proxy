@@ -20,10 +20,10 @@ import (
 	"testing"
 )
 
-const TEST_CREDENTIALS = "TestIssuer"
+const testIssuer = "TestIssuer"
 
 func TestClientEncrypt(t *testing.T) {
-	secureKey, err := NewSecureKey(TEST_CREDENTIALS)
+	secureKey, err := NewSecureKey(testIssuer)
 	if err != nil {
 		t.Errorf("Cred: got %v, want nil err", err)
 		return
@@ -37,14 +37,14 @@ func TestClientEncrypt(t *testing.T) {
 }
 
 func TestClientDecrypt(t *testing.T) {
-	secureKey, err :=  NewSecureKey(TEST_CREDENTIALS)
+	secureKey, err := NewSecureKey(testIssuer)
 	if err != nil {
 		t.Errorf("Cred: got %v, want nil err", err)
 		return
 	}
 	byteSlice := []byte("Plain text to encrypt")
 	ciphertext, _ := secureKey.Encrypt(nil, byteSlice, crypto.SHA256)
-	plaintext, err := secureKey.Decrypt(nil, ciphertext, &rsa.OAEPOptions{Hash:crypto.SHA256})
+	plaintext, err := secureKey.Decrypt(nil, ciphertext, &rsa.OAEPOptions{Hash: crypto.SHA256})
 	if err != nil {
 		t.Errorf("Client API decryption: got %v, want nil err", err)
 		return
