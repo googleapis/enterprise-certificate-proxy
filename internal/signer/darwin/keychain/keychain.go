@@ -69,8 +69,8 @@ var (
 	}
 )
 
-const UNKNOWN_SECKEY_ALGORITHM = C.CFStringRef(0)
-const INVALID_KEY = C.SecKeyRef(0)
+const unknownSecKeyAlgorithm = C.CFStringRef(0)
+const invalidKey = C.SecKeyRef(0)
 
 // cfStringToString returns a Go string given a CFString.
 func cfStringToString(cfStr C.CFStringRef) string {
@@ -420,7 +420,7 @@ func identityToPublicSecKeyRef(ident C.SecIdentityRef) (C.SecKeyRef, error) {
 
 	key = C.SecCertificateCopyKey(certRef)
 
-	if key == INVALID_KEY {
+	if key == invalidKey {
 		return 0, fmt.Errorf("public key was NULL. Key might have an encoding issue or use an unsupported algorithm")
 	}
 	return key, nil
@@ -442,10 +442,6 @@ func certIn(xc *x509.Certificate, xcs []*x509.Certificate) bool {
 		}
 	}
 	return false
-}
-func (k *Key) WithHash(hash crypto.Hash) *Key {
-	k.hash = hash
-	return k
 }
 
 func (k *Key) getPaddingSize() int {
@@ -471,7 +467,7 @@ func (k *Key) getPaddingSize() int {
 		C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA512:
 		return pkcsPaddingBytes
 	default:
-		return int(UNKNOWN_SECKEY_ALGORITHM)
+		return int(unknownSecKeyAlgorithm)
 	}
 }
 
@@ -495,10 +491,10 @@ func (k *Key) getRSAEncryptAlgorithm() (C.SecKeyAlgorithm, error) {
 		} else if C.SecKeyIsAlgorithmSupported(k.publicKeyRef, C.kSecKeyOperationTypeEncrypt, C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA256) == 1 {
 			algorithms = rsaPKCS1v15Algorithms
 		} else {
-			return UNKNOWN_SECKEY_ALGORITHM, fmt.Errorf("unknown RSA argument. Only supports PSS, OAEP, and PKCS1v1.5 %T", pub)
+			return unknownSecKeyAlgorithm, fmt.Errorf("unknown RSA argument. Only supports PSS, OAEP, and PKCS1v1.5 %T", pub)
 		}
 	default:
-		return UNKNOWN_SECKEY_ALGORITHM, fmt.Errorf("algorithm is unsupported. only RSA algorithms are supported. %T", pub)
+		return unknownSecKeyAlgorithm, fmt.Errorf("algorithm is unsupported. only RSA algorithms are supported. %T", pub)
 	}
 	return algorithms[k.hash], nil
 }
@@ -521,10 +517,10 @@ func (k *Key) getRSADecryptAlgorithm() (C.SecKeyAlgorithm, error) {
 		} else if C.SecKeyIsAlgorithmSupported(k.publicKeyRef, C.kSecKeyOperationTypeDecrypt, C.kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA256) == 1 {
 			algorithms = rsaPKCS1v15Algorithms
 		} else {
-			return UNKNOWN_SECKEY_ALGORITHM, fmt.Errorf("unknown RSA argument. Only supports PSS, OAEP, and PKCS1v1.5 %T", pub)
+			return unknownSecKeyAlgorithm, fmt.Errorf("unknown RSA argument. Only supports PSS, OAEP, and PKCS1v1.5 %T", pub)
 		}
 	default:
-		return UNKNOWN_SECKEY_ALGORITHM, fmt.Errorf("algorithm is unsupported. only RSA algorithms are supported. %T", pub)
+		return unknownSecKeyAlgorithm, fmt.Errorf("algorithm is unsupported. only RSA algorithms are supported. %T", pub)
 	}
 	return algorithms[k.hash], nil
 }
