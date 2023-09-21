@@ -19,10 +19,31 @@ import (
 
 func TestLoadConfig(t *testing.T) {
 	config, err := LoadConfig("./test_data/certificate_config.json")
+	// darwin
 	if err != nil {
-		t.Fatalf("LoadConfig error: %v", err)
+		t.Fatalf("LoadConfig error: %q", err)
 	}
-	want := "0x1739427"
+	want := "Google Endpoint Verification"
+	if config.CertConfigs.MacOSKeychain.Issuer != want {
+		t.Errorf("Expected issuer is %q, got: %q", want, config.CertConfigs.MacOSKeychain.Issuer)
+	}
+
+	// windows
+	want = "enterprise_v1_corp_client"
+	if config.CertConfigs.WindowsStore.Issuer != want {
+		t.Errorf("Expected issuer is %q, got: %q", want, config.CertConfigs.WindowsStore.Issuer)
+	}
+	want = "MY"
+	if config.CertConfigs.WindowsStore.Store != want {
+		t.Errorf("Expected store is %q, got: %q", want, config.CertConfigs.WindowsStore.Store)
+	}
+	want = "current_user"
+	if config.CertConfigs.WindowsStore.Provider != want {
+		t.Errorf("Expected provider is %q, got: %q", want, config.CertConfigs.WindowsStore.Provider)
+	}
+
+	// pkcs11
+	want = "0x1739427"
 	if config.CertConfigs.PKCS11.Slot != want {
 		t.Errorf("Expected slot is %v, got: %v", want, config.CertConfigs.PKCS11.Slot)
 	}
@@ -42,24 +63,6 @@ func TestLoadConfig(t *testing.T) {
 
 func TestLoadConfigMissing(t *testing.T) {
 	_, err := LoadConfig("./test_data/certificate_config_missing.json")
-	if err == nil {
-		t.Error("Expected error but got nil")
-	}
-}
-
-func TestParseHexString(t *testing.T) {
-	got, err := ParseHexString("0x1739427")
-	if err != nil {
-		t.Fatalf("ParseHexString error: %v", err)
-	}
-	want := uint32(0x1739427)
-	if got != want {
-		t.Errorf("Expected result is %v, got: %v", want, got)
-	}
-}
-
-func TestParseHexStringFailure(t *testing.T) {
-	_, err := ParseHexString("abcdefgh")
 	if err == nil {
 		t.Error("Expected error but got nil")
 	}

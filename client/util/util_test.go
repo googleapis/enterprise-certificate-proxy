@@ -14,6 +14,7 @@
 package util
 
 import (
+	"os"
 	"testing"
 )
 
@@ -23,6 +24,37 @@ func TestLoadSignerBinaryPath(t *testing.T) {
 		t.Errorf("LoadSignerBinaryPath error: %q", err)
 	}
 	want := "C:/Program Files (x86)/Google/Endpoint Verification/signer.exe"
+	if path != want {
+		t.Errorf("Expected path is %q, got: %q", want, path)
+	}
+}
+
+func TestLoadSignerBinaryPathHome(t *testing.T) {
+	path, err := LoadSignerBinaryPath("./test_data/certificate_config_home_expansion.json")
+	if err != nil {
+		t.Errorf("LoadSignerBinaryPath error: %q", err)
+	}
+	want := guessHomeDir() + "/ecp/signer"
+	if path != want {
+		t.Errorf("Expected path is %q, got: %q", want, path)
+	}
+}
+
+func TestLoadSignerBinaryPathTilde(t *testing.T) {
+	path, err := LoadSignerBinaryPath("./test_data/certificate_config_tilde_expansion.json")
+	if err != nil {
+		t.Errorf("LoadSignerBinaryPath error: %q", err)
+	}
+	want := guessHomeDir() + "/ecp/signer"
+	if path != want {
+		t.Errorf("Expected path is %q, got: %q", want, path)
+	}
+}
+
+func TestGetConfigFilePathFromEnv(t *testing.T) {
+	want := "/testpath"
+	os.Setenv("GOOGLE_API_CERTIFICATE_CONFIG", want)
+	path := GetConfigFilePathFromEnv()
 	if path != want {
 		t.Errorf("Expected path is %q, got: %q", want, path)
 	}

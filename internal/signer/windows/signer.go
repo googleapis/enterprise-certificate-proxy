@@ -26,8 +26,9 @@ import (
 	"log"
 	"net/rpc"
 	"os"
-	"signer/ncrypt"
-	"signer/util"
+
+	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/util"
+	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/windows/ncrypt"
 )
 
 // If ECP Logging is enabled return true

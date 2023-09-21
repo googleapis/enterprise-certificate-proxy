@@ -17,7 +17,10 @@ package client
 import (
 	"bytes"
 	"crypto"
+	"crypto/rsa"
+	"encoding/json"
 	"errors"
+	"os"
 	"testing"
 )
 
@@ -35,10 +38,29 @@ func TestClient_Cred_ConfigMissing(t *testing.T) {
 	}
 }
 
-func TestClient_Cred_PathMissing(t *testing.T) {
+func TestClient_Cred_BinaryPathMissing(t *testing.T) {
 	_, err := Cred("testdata/certificate_config_missing_path.json")
 	if got, want := err, ErrCredUnavailable; !errors.Is(got, want) {
 		t.Errorf("Cred: with missing ECP path; got %v, want %v err", got, want)
+	}
+}
+
+func TestClient_Cred_EnvOverride_ExplicitConfig(t *testing.T) {
+	configFilePath := "testdata/certificate_config.json"
+	os.Setenv("GOOGLE_API_CERTIFICATE_CONFIG", "testdata/certificate_config_missing_path.json")
+	_, err := Cred(configFilePath)
+	if err != nil {
+		t.Errorf("Cred: with explicit config and set env var; got %v, want %v err", err, nil)
+	}
+}
+
+func TestClient_Cred_EnvOverride_EmptyConfig(t *testing.T) {
+	configFilePath := ""
+	os.Setenv("GOOGLE_API_CERTIFICATE_CONFIG", "testdata/certificate_config_broken.json")
+	_, err := Cred(configFilePath)
+	var serr *json.SyntaxError
+	if got, want := err, &serr; !errors.As(got, want) {
+		t.Errorf("Cred: with empty config and set env var; got %v, want %v err", got, want)
 	}
 }
 
@@ -73,6 +95,36 @@ func TestClient_Sign(t *testing.T) {
 	}
 	if got, want := signed, []byte("testDigest"); !bytes.Equal(got, want) {
 		t.Errorf("Sign: got %c, want %c", got, want)
+	}
+}
+
+func TestClientEncrypt(t *testing.T) {
+	key, err := Cred("testdata/certificate_config.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	plaintext := []byte("Plain text to encrypt")
+	_, err = key.Encrypt(nil, plaintext, crypto.SHA256)
+	if err != nil {
+		t.Errorf("Universal Client API encryption: got %v, want nil err", err)
+		return
+	}
+}
+
+func TestClientDecrypt(t *testing.T) {
+	key, err := Cred("testdata/certificate_config.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	byteSlice := []byte("Plain text to encrypt")
+	ciphertext, _ := key.Encrypt(nil, byteSlice, crypto.SHA256)
+	plaintext, err := key.Decrypt(nil, ciphertext, &rsa.OAEPOptions{Hash: crypto.SHA256})
+	if err != nil {
+		t.Errorf("Universal Client API decryption: got %v, want nil err", err)
+		return
+	}
+	if !bytes.Equal(byteSlice, plaintext) {
+		t.Errorf("Decryption message does not match original: got %v, want %v", plaintext, byteSlice)
 	}
 }
 

@@ -18,9 +18,13 @@ package keychain
 
 import (
 	"bytes"
+	"crypto"
+	"crypto/rsa"
 	"testing"
 	"unsafe"
 )
+
+const TEST_CREDENTIALS = "TestIssuer"
 
 func TestKeychainError(t *testing.T) {
 	tests := []struct {
@@ -44,5 +48,68 @@ func TestBytesToCFDataRoundTrip(t *testing.T) {
 	defer cfRelease(unsafe.Pointer(d))
 	if got := cfDataToBytes(d); !bytes.Equal(got, want) {
 		t.Errorf("bytesToCFData -> cfDataToBytes\ngot  %x\nwant %x", got, want)
+	}
+}
+
+func TestEncrypt(t *testing.T) {
+	key, err := Cred(TEST_CREDENTIALS)
+	if err != nil {
+		t.Errorf("Cred: got %v, want nil err", err)
+		return
+	}
+	plaintext := []byte("Plain text to encrypt")
+	_, err = key.Encrypt(plaintext, crypto.SHA256)
+	if err != nil {
+		t.Errorf("Encrypt: got %v, want nil err", err)
+		return
+	}
+}
+
+func BenchmarkEncrypt(b *testing.B) {
+	key, err := Cred(TEST_CREDENTIALS)
+	if err != nil {
+		b.Errorf("Cred: got %v, want nil err", err)
+		return
+	}
+	plaintext := []byte("Plain text to encrypt")
+	for i := 0; i < b.N; i++ {
+		_, err := key.Encrypt(plaintext, crypto.SHA256)
+		if err != nil {
+			b.Errorf("Encrypt: got %v, want nil err", err)
+		}
+	}
+}
+
+func TestDecrypt(t *testing.T) {
+	key, err := Cred(TEST_CREDENTIALS)
+	if err != nil {
+		t.Errorf("Cred: got %v, want nil err", err)
+		return
+	}
+	byteSlice := []byte("Plain text to encrypt")
+	ciphertext, _ := key.Encrypt(byteSlice, crypto.SHA256)
+	plaintext, err := key.Decrypt(ciphertext, &rsa.OAEPOptions{Hash: crypto.SHA256})
+	if err != nil {
+		t.Errorf("Decrypt: got %v, want nil err", err)
+		return
+	}
+	if !bytes.Equal(byteSlice, plaintext) {
+		t.Errorf("Decryption message does not match original: got %v, want %v", plaintext, byteSlice)
+	}
+}
+
+func BenchmarkDecrypt(b *testing.B) {
+	key, err := Cred(TEST_CREDENTIALS)
+	if err != nil {
+		b.Errorf("Cred: got %v, want nil err", err)
+		return
+	}
+	byteSlice := []byte("Plain text to encrypt")
+	ciphertext, _ := key.Encrypt(byteSlice, crypto.SHA256)
+	for i := 0; i < b.N; i++ {
+		_, err := key.Decrypt(ciphertext, &rsa.OAEPOptions{Hash: crypto.SHA256})
+		if err != nil {
+			b.Errorf("Decrypt: got %v, want nil err", err)
+		}
 	}
 }
