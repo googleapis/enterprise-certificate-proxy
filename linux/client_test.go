@@ -16,6 +16,7 @@ package linux
 import (
 	"bytes"
 	"crypto"
+	"crypto/rsa"
 	"flag"
 	"testing"
 )
@@ -36,9 +37,7 @@ func TestEncrypt(t *testing.T) {
 	message := "Plain text to encrypt"
 	bMessage := []byte(message)
 	//Softhsm only supports SHA1
-	res := (sk.key).WithHash(crypto.SHA1)
-	sk.key = res
-	_, err = sk.Encrypt(bMessage)
+	_, err = sk.Encrypt(nil, bMessage, crypto.SHA1)
 	if err != nil {
 		t.Errorf("Client Encrypt error: %q", err)
 	}
@@ -52,13 +51,11 @@ func TestDecrypt(t *testing.T) {
 	message := "Plain text to encrypt"
 	bMessage := []byte(message)
 	//Softhsm only supports SHA1
-	res := (sk.key).WithHash(crypto.SHA1)
-	sk.key = res
-	cipher, err := sk.Encrypt(bMessage)
+	cipher, err := sk.Encrypt(nil, bMessage, crypto.SHA1)
 	if err != nil {
 		t.Errorf("Client Encrypt error: %q", err)
 	}
-	decrypted, err := sk.Decrypt(cipher)
+	decrypted, err := sk.Decrypt(nil, cipher, &rsa.OAEPOptions{Hash: crypto.SHA1})
 	if err != nil {
 		t.Fatalf("Client Decrypt error: %v", err)
 	}

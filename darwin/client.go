@@ -40,17 +40,19 @@ func (sk *SecureKey) Public() crypto.PublicKey {
 	return sk.key.Public()
 }
 
-// Sign signs a message digest, using the specified signer options.
+// Sign signs a message digest, using the specified signer opts. Implements crypto.Signer interface.
 func (sk *SecureKey) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) (signed []byte, err error) {
 	return sk.key.Sign(nil, digest, opts)
 }
 
-func (sk *SecureKey) Encrypt(plaintext []byte) ([]byte, error) {
-	return sk.key.Encrypt(plaintext)
+// Encrypt encrypts a plaintext msg into ciphertext, using the specified encrypt opts.
+func (sk *SecureKey) Encrypt(_ io.Reader, msg []byte, opts any) (ciphertext []byte, err error) {
+	return sk.key.Encrypt(msg, opts)
 }
 
-func (sk *SecureKey) Decrypt(ciphertext []byte) ([]byte, error) {
-	return sk.key.Decrypt(ciphertext)
+// Decrypt decrypts a ciphertext msg into plaintext, using the specified decrypter opts. Implements crypto.Decrypter interface.
+func (sk *SecureKey) Decrypt(_ io.Reader, msg []byte, opts crypto.DecrypterOpts) (plaintext []byte, err error) {
+	return sk.key.Decrypt(msg, opts)
 }
 
 // Close frees up resources associated with the underlying key.

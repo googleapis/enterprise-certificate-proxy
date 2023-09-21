@@ -18,11 +18,13 @@ package keychain
 
 import (
 	"bytes"
+	"crypto"
+	"crypto/rsa"
 	"testing"
 	"unsafe"
 )
 
-const TEST_CREDENTIALS = "TestIssuer"
+const testIssuer = "TestIssuer"
 
 func TestKeychainError(t *testing.T) {
 	tests := []struct {
@@ -50,13 +52,13 @@ func TestBytesToCFDataRoundTrip(t *testing.T) {
 }
 
 func TestEncrypt(t *testing.T) {
-	key, err := Cred(TEST_CREDENTIALS)
+	key, err := Cred(testIssuer)
 	if err != nil {
 		t.Errorf("Cred: got %v, want nil err", err)
 		return
 	}
 	plaintext := []byte("Plain text to encrypt")
-	_, err = key.Encrypt(plaintext)
+	_, err = key.Encrypt(plaintext, crypto.SHA256)
 	if err != nil {
 		t.Errorf("Encrypt: got %v, want nil err", err)
 		return
@@ -64,14 +66,14 @@ func TestEncrypt(t *testing.T) {
 }
 
 func BenchmarkEncrypt(b *testing.B) {
-	key, err := Cred(TEST_CREDENTIALS)
+	key, err := Cred(testIssuer)
 	if err != nil {
 		b.Errorf("Cred: got %v, want nil err", err)
 		return
 	}
 	plaintext := []byte("Plain text to encrypt")
 	for i := 0; i < b.N; i++ {
-		_, err := key.Encrypt(plaintext)
+		_, err := key.Encrypt(plaintext, crypto.SHA256)
 		if err != nil {
 			b.Errorf("Encrypt: got %v, want nil err", err)
 		}
@@ -79,14 +81,14 @@ func BenchmarkEncrypt(b *testing.B) {
 }
 
 func TestDecrypt(t *testing.T) {
-	key, err := Cred(TEST_CREDENTIALS)
+	key, err := Cred(testIssuer)
 	if err != nil {
 		t.Errorf("Cred: got %v, want nil err", err)
 		return
 	}
 	byteSlice := []byte("Plain text to encrypt")
-	ciphertext, _ := key.Encrypt(byteSlice)
-	plaintext, err := key.Decrypt(ciphertext)
+	ciphertext, _ := key.Encrypt(byteSlice, crypto.SHA256)
+	plaintext, err := key.Decrypt(ciphertext, &rsa.OAEPOptions{Hash: crypto.SHA256})
 	if err != nil {
 		t.Errorf("Decrypt: got %v, want nil err", err)
 		return
@@ -97,15 +99,15 @@ func TestDecrypt(t *testing.T) {
 }
 
 func BenchmarkDecrypt(b *testing.B) {
-	key, err := Cred(TEST_CREDENTIALS)
+	key, err := Cred(testIssuer)
 	if err != nil {
 		b.Errorf("Cred: got %v, want nil err", err)
 		return
 	}
 	byteSlice := []byte("Plain text to encrypt")
-	ciphertext, _ := key.Encrypt(byteSlice)
+	ciphertext, _ := key.Encrypt(byteSlice, crypto.SHA256)
 	for i := 0; i < b.N; i++ {
-		_, err := key.Decrypt(ciphertext)
+		_, err := key.Decrypt(ciphertext, &rsa.OAEPOptions{Hash: crypto.SHA256})
 		if err != nil {
 			b.Errorf("Decrypt: got %v, want nil err", err)
 		}

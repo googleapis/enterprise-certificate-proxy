@@ -32,10 +32,12 @@ type SignArgs struct {
 	Opts   crypto.SignerOpts
 }
 
+// EncryptArgs encapsulate the parameters for the Encrypt method.
 type EncryptArgs struct {
 	Plaintext []byte
 }
 
+// DecryptArgs encapsulate the parameters for the Decrypt method.
 type DecryptArgs struct {
 	Ciphertext []byte
 }
@@ -81,17 +83,19 @@ func (k *EnterpriseCertSigner) Public(ignored struct{}, publicKey *[]byte) (err 
 	return err
 }
 
-// Sign signs a message digest.
+// Sign signs a message digest. For testing, we return the input as-is.
 func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
 	*resp = args.Digest
 	return nil
 }
 
+// Encrypt encrypts a plaintext msg. For testing, we return the input as-is.
 func (k *EnterpriseCertSigner) Encrypt(args EncryptArgs, plaintext *[]byte) (err error) {
 	*plaintext = args.Plaintext
 	return nil
 }
 
+// Decrypt decrypts a ciphertext msg. For testing, we return the input as-is.
 func (k *EnterpriseCertSigner) Decrypt(args DecryptArgs, ciphertext *[]byte) (err error) {
 	*ciphertext = args.Ciphertext
 	return nil

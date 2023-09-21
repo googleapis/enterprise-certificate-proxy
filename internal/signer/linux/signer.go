@@ -49,22 +49,25 @@ func init() {
 	gob.Register(crypto.SHA384)
 	gob.Register(crypto.SHA512)
 	gob.Register(&rsa.PSSOptions{})
+	gob.Register(&rsa.OAEPOptions{})
 }
 
-// SignArgs contains arguments to a crypto Signer.Sign method.
+// SignArgs contains arguments for a Sign API call.
 type SignArgs struct {
 	Digest []byte            // The content to sign.
-	Opts   crypto.SignerOpts // Options for signing, such as Hash identifier.
+	Opts   crypto.SignerOpts // Options for signing. Must implement HashFunc().
 }
 
+// EncryptArgs contains arguments for an Encrypt API call.
 type EncryptArgs struct {
-	Plaintext []byte
-	Hash      crypto.Hash
+	Plaintext []byte // The plaintext to encrypt.
+	Opts      any    // Options for encryption. Ex: an instance of crypto.Hash.
 }
 
+// DecryptArgs contains arguments to for a Decrypt API call.
 type DecryptArgs struct {
-	Ciphertext []byte
-	Hash       crypto.Hash
+	Ciphertext []byte               // The ciphertext to decrypt.
+	Opts       crypto.DecrypterOpts // Options for decryption. Ex: an instance of *rsa.OAEPOptions.
 }
 
 // A EnterpriseCertSigner exports RPC methods for signing.
@@ -101,21 +104,21 @@ func (k *EnterpriseCertSigner) Public(ignored struct{}, publicKey *[]byte) (err 
 	return
 }
 
-// Sign signs a message digest.
+// Sign signs a message digest. Stores result in "resp".
 func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
 	*resp, err = k.key.Sign(nil, args.Digest, args.Opts)
 	return
 }
 
-func (k *EnterpriseCertSigner) Encrypt(args EncryptArgs, encryptedData *[]byte) (err error) {
-	k.key = k.key.WithHash(args.Hash)
-	*encryptedData, err = k.key.Encrypt(args.Plaintext)
+// Encrypt encrypts a plaintext msg. Stores result in "resp".
+func (k *EnterpriseCertSigner) Encrypt(args EncryptArgs, resp *[]byte) (err error) {
+	*resp, err = k.key.Encrypt(args.Plaintext, args.Opts)
 	return
 }
 
-func (k *EnterpriseCertSigner) Decrypt(args DecryptArgs, decryptedData *[]byte) (err error) {
-	k.key = k.key.WithHash(args.Hash)
-	*decryptedData, err = k.key.Decrypt(args.Ciphertext)
+// Decrypt decrypts a ciphertext msg. Stores result in "resp".
+func (k *EnterpriseCertSigner) Decrypt(args DecryptArgs, resp *[]byte) (err error) {
+	*resp, err = k.key.Decrypt(args.Ciphertext, args.Opts)
 	return
 }
 
@@ -135,7 +138,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize enterprise cert signer using pkcs11: %v", err)
 	}
-	enterpriseCertSigner.key = enterpriseCertSigner.key.WithHash(crypto.SHA1)
 
 	if err := rpc.Register(enterpriseCertSigner); err != nil {
 		log.Fatalf("Failed to register enterprise cert signer with net/rpc: %v", err)

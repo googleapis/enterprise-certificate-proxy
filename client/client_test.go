@@ -17,6 +17,7 @@ package client
 import (
 	"bytes"
 	"crypto"
+	"crypto/rsa"
 	"encoding/json"
 	"errors"
 	"os"
@@ -103,7 +104,7 @@ func TestClientEncrypt(t *testing.T) {
 		t.Fatal(err)
 	}
 	plaintext := []byte("Plain text to encrypt")
-	_, err = key.Encrypt(plaintext)
+	_, err = key.Encrypt(nil, plaintext, crypto.SHA256)
 	if err != nil {
 		t.Errorf("Universal Client API encryption: got %v, want nil err", err)
 		return
@@ -116,8 +117,8 @@ func TestClientDecrypt(t *testing.T) {
 		t.Fatal(err)
 	}
 	byteSlice := []byte("Plain text to encrypt")
-	ciphertext, _ := key.Encrypt(byteSlice)
-	plaintext, err := key.Decrypt(ciphertext)
+	ciphertext, _ := key.Encrypt(nil, byteSlice, crypto.SHA256)
+	plaintext, err := key.Decrypt(nil, ciphertext, &rsa.OAEPOptions{Hash: crypto.SHA256})
 	if err != nil {
 		t.Errorf("Universal Client API decryption: got %v, want nil err", err)
 		return
