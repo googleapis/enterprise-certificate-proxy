@@ -55,13 +55,25 @@ Before using ECP with your application/client, you should complete the policy co
 
 ### Manual Certificate Configuration
 
-ECP relies on the `certificate_config.json` file to read all the metadata information for locating the certificate.
-It is stored as a JSON file at the following location on the user's device:
+ECP relies on a certificate configuration JSON file to read all the metadata information for locating the certificate.
+By default, it is named `certificate_config.json` and stored at the following location on the user's device:
 
-* **Linux and MacOS**: ~/.config/gcloud/certificate_config.json
-* **Windows**: %APPDATA%\gcloud\certificate_config.json 
+* **Linux and MacOS**: `~/.config/gcloud/certificate_config.json`
+* **Windows**: `%APPDATA%\gcloud\certificate_config.json`
 
-Below are example configurations:
+You can put the JSON file in the location of your choice and set the path to it using:
+
+```
+$ gcloud config set context_aware/certificate_config_file_path "<json file path>"
+```
+
+Another approach for setting the JSON file location is with the `GOOGLE_API_CERTIFICATE_CONFIG` environment variable.
+
+```
+$ export GOOGLE_API_CERTIFICATE_CONFIG="<json file path>"
+```
+
+Below are examples of the certificate configuration file:
 
 #### MacOS (Keychain)
 
@@ -82,6 +94,7 @@ Below are example configurations:
 ```
 
 #### Windows (MyStore)
+
 ```json
 {
   "cert_configs": {
@@ -101,6 +114,7 @@ Below are example configurations:
 ```
 
 #### Linux (PKCS#11)
+
 ```json
 {
   "cert_configs": {
@@ -122,13 +136,12 @@ Below are example configurations:
 
 ### Logging
 
-To enable logging set the "ENABLE_ENTERPRISE_CERTIFICATE_LOGS" environment
-variable.
+To enable logging set the `ENABLE_ENTERPRISE_CERTIFICATE_LOGS` environment variable.
 
 #### Example
 
 ```
-export ENABLE_ENTERPRISE_CERTIFICATE_LOGS=1 # Now the enterprise-certificate-proxy will output logs to stdout.
+$ export ENABLE_ENTERPRISE_CERTIFICATE_LOGS=1 # Now the enterprise-certificate-proxy will output logs to stdout.
 ```
 
 ## Building ECP binaries from source
