@@ -39,6 +39,8 @@ import (
 	"github.com/googleapis/enterprise-certificate-proxy/client"
 )
 
+var Version = "dev"
+
 // If ECP Logging is enabled return true
 // Otherwise return false
 func enableECPLogging() bool {
@@ -69,6 +71,13 @@ func getCertPem(configFilePath string) []byte {
 		certChainPem = append(certChainPem, certPem...)
 	}
 	return certChainPem
+}
+
+// Returns ECP's version number.
+//
+//export ECPVersion
+func ECPVersion() *C.char {
+	return C.CString(Version)
 }
 
 // GetCertPemForPython reads the contents of the certificate specified by configFilePath,

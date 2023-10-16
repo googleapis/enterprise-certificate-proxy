@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -eu
+set -eux
+
+CURRENT_TAG=$(git tag --sort v:refname | tail -n 1)
 
 # Create a folder to hold the binaries
 rm -rf ./build/bin/darwin_arm64
@@ -26,5 +28,5 @@ mv darwin ./../../../build/bin/darwin_arm64/ecp
 cd ./../../..
 
 # Build the signer library
-CGO_ENABLED=1 GO111MODULE=on GOARCH=arm64 go build -buildmode=c-shared -o build/bin/darwin_arm64/libecp.dylib cshared/main.go
+CGO_ENABLED=1 GO111MODULE=on GOARCH=arm64 go build -buildmode=c-shared -ldflags="-X=main.Version=$CURRENT_TAG" -o build/bin/darwin_arm64/libecp.dylib cshared/main.go
 rm build/bin/darwin_arm64/libecp.h

@@ -13,12 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -eux
+
+CURRENT_TAG=$(git tag --sort v:refname | tail -n 1)
+
 # Create a folder to hold the binaries
 rm -rf ./build/bin/linux_amd64
 mkdir -p ./build/bin/linux_amd64
 
 # Build the signer library
-go build -buildmode=c-shared -o build/bin/linux_amd64/libecp.so cshared/main.go
+go build -buildmode=c-shared -ldflags="-X=main.Version=$CURRENT_TAG" -o build/bin/linux_amd64/libecp.so cshared/main.go
 rm build/bin/linux_amd64/libecp.h
 
 # Build the signer binary
