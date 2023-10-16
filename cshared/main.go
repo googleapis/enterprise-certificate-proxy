@@ -71,31 +71,6 @@ func getCertPem(configFilePath string) []byte {
 	return certChainPem
 }
 
-// Returns a string matching ECP's key type.
-// An ecp config is required to determine which key is requested.
-//
-//export GetKeyType
-func GetKeyType(configFilePath *C.char) *C.char {
-	key, err := client.Cred(C.GoString(configFilePath))
-	if err != nil {
-		log.Printf("Could not create client using config %s: %v", C.GoString(configFilePath), err)
-		return C.CString("unknown")
-	}
-	defer func() {
-		if err = key.Close(); err != nil {
-			log.Printf("Failed to clean up key. %v", err)
-		}
-	}()
-	switch key.Public().(type) {
-	case *ecdsa.PublicKey:
-		return C.CString("EC")
-	case *rsa.PublicKey:
-		return C.CString("RSA")
-	default:
-		return C.CString("unknown")
-	}
-
-}
 // GetCertPemForPython reads the contents of the certificate specified by configFilePath,
 // storing the result inside a certHolder byte array of size certHolderLen.
 //
@@ -172,6 +147,31 @@ func SignForPython(configFilePath *C.char, digest *byte, digestLen int, sigHolde
 	outBytes := unsafe.Slice(sigHolder, sigHolderLen)
 	copy(outBytes, signature)
 	return len(signature)
+}
+
+// GetKeyType returns a string representing ECP's key type.
+// The key is derived from the ECP configuration.
+//
+//export GetKeyType
+func GetKeyType(configFilePath *C.char) *C.char {
+	key, err := client.Cred(C.GoString(configFilePath))
+	if err != nil {
+		log.Printf("Could not create client using config %s: %v", C.GoString(configFilePath), err)
+		return C.CString("unknown")
+	}
+	defer func() {
+		if err = key.Close(); err != nil {
+			log.Printf("Failed to clean up key. %v", err)
+		}
+	}()
+	switch key.Public().(type) {
+	case *ecdsa.PublicKey:
+		return C.CString("EC")
+	case *rsa.PublicKey:
+		return C.CString("RSA")
+	default:
+		return C.CString("unknown")
+	}
 }
 
 func main() {}
