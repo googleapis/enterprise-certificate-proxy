@@ -109,10 +109,7 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 	if !ok {
 		return nil, errors.New("PrivateKey does not implement crypto.Signer")
 	}
-	kdecrypter, ok := privKey.(crypto.Decrypter)
-	if !ok {
-		return nil, errors.New("PrivateKey does not implement crypto.Decrypter")
-	}
+	kdecrypter, _ := privKey.(crypto.Decrypter)
 	defaultHash := crypto.SHA256
 	return &Key{
 		slot:      kslot,
@@ -187,6 +184,9 @@ func (k *Key) Decrypt(msg []byte, opts crypto.DecrypterOpts) ([]byte, error) {
 		k.hash = oaepOpts.Hash
 	} else {
 		return nil, fmt.Errorf("Unsupported DecrypterOpts: %v", opts)
+	}
+	if k.decrypter == nil {
+		return nil, fmt.Errorf("decrypt error: Decrypter is nil")
 	}
 	publicKey := k.Public()
 	_, ok := publicKey.(*rsa.PublicKey)
