@@ -71,15 +71,15 @@ func getCertPem(configFilePath string) []byte {
 	return certChainPem
 }
 
-// GetCertPemForPython reads the contents of the certificate specified by configFilePath,
+// GetCertPem reads the contents of the certificate specified by configFilePath,
 // storing the result inside a certHolder byte array of size certHolderLen.
 //
 // We must call it twice to get the cert. First time use nil for certHolder to get
-// the cert length. Second time we pre-create an array in Python of the cert length and
+// the cert length. Second time we pre-create an array of the cert length and
 // call this function again to load the cert into the array.
 //
-//export GetCertPemForPython
-func GetCertPemForPython(configFilePath *C.char, certHolder *byte, certHolderLen int) int {
+//export GetCertPem
+func GetCertPem(configFilePath *C.char, certHolder *byte, certHolderLen int) int {
 	enableECPLogging()
 	pemBytes := getCertPem(C.GoString(configFilePath))
 	if certHolder != nil {
@@ -89,11 +89,23 @@ func GetCertPemForPython(configFilePath *C.char, certHolder *byte, certHolderLen
 	return len(pemBytes)
 }
 
-// SignForPython signs a message digest of length digestLen using a certificate private key
+// GetCertPemForPython reads the contents of the certificate specified by configFilePath,
+// storing the result inside a certHolder byte array of size certHolderLen.
+//
+// We must call it twice to get the cert. First time use nil for certHolder to get
+// the cert length. Second time we pre-create an array in Python of the cert length and
+// call this function again to load the cert into the array.
+//
+//export GetCertPemForPython
+func GetCertPemForPython(configFilePath *C.char, certHolder *byte, certHolderLen int) int {
+	return GetCertPem(configFilePath, certHolder, certHolderLen)
+}
+
+// Sign signs a message digest of length digestLen using a certificate private key
 // specified by configFilePath, storing the result inside a sigHolder byte array of size sigHolderLen.
 //
-//export SignForPython
-func SignForPython(configFilePath *C.char, digest *byte, digestLen int, sigHolder *byte, sigHolderLen int) int {
+//export Sign
+func Sign(configFilePath *C.char, digest *byte, digestLen int, sigHolder *byte, sigHolderLen int) int {
 	// First create a handle around the specified certificate and private key.
 	enableECPLogging()
 	key, err := client.Cred(C.GoString(configFilePath))
@@ -147,6 +159,14 @@ func SignForPython(configFilePath *C.char, digest *byte, digestLen int, sigHolde
 	outBytes := unsafe.Slice(sigHolder, sigHolderLen)
 	copy(outBytes, signature)
 	return len(signature)
+}
+
+// SignForPython signs a message digest of length digestLen using a certificate private key
+// specified by configFilePath, storing the result inside a sigHolder byte array of size sigHolderLen.
+//
+//export SignForPython
+func SignForPython(configFilePath *C.char, digest *byte, digestLen int, sigHolder *byte, sigHolderLen int) int {
+	return Sign(configFilePath, digest, digestLen, sigHolder, sigHolderLen);
 }
 
 // GetKeyType returns a string representing ECP's key type.
