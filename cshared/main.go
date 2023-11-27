@@ -96,6 +96,8 @@ func GetCertPem(configFilePath *C.char, certHolder *byte, certHolderLen int) int
 // the cert length. Second time we pre-create an array in Python of the cert length and
 // call this function again to load the cert into the array.
 //
+// Deprecated: This API is deprecated in favor of GetCertPem and will be removed in future versions.
+//
 //export GetCertPemForPython
 func GetCertPemForPython(configFilePath *C.char, certHolder *byte, certHolderLen int) int {
 	return GetCertPem(configFilePath, certHolder, certHolderLen)
@@ -163,6 +165,8 @@ func Sign(configFilePath *C.char, digest *byte, digestLen int, sigHolder *byte, 
 
 // SignForPython signs a message digest of length digestLen using a certificate private key
 // specified by configFilePath, storing the result inside a sigHolder byte array of size sigHolderLen.
+//
+// Deprecated: This API is deprecated in favor of Sign and will be removed in future versions.
 //
 //export SignForPython
 func SignForPython(configFilePath *C.char, digest *byte, digestLen int, sigHolder *byte, sigHolderLen int) int {
