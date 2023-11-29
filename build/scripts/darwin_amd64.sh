@@ -15,7 +15,7 @@
 
 set -eux
 
-CURRENT_TAG=$(git tag --sort v:refname | tail -n 1)
+CURRENT_TAG=$(cat version.txt)
 
 # Create a folder to hold the binaries
 rm -rf ./build/bin/darwin_amd64

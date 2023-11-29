@@ -39,6 +39,8 @@ import (
 	"github.com/googleapis/enterprise-certificate-proxy/client"
 )
 
+// Version is generally set by the build command. Releases of ECP must have a specific version set.
+// The version can be set when running `go build` like so `-ldflags="-X=main.Version=$CURRENT_TAG" `.
 var Version = "dev"
 
 // If ECP Logging is enabled return true
