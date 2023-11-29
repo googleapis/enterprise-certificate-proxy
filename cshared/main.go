@@ -39,6 +39,10 @@ import (
 	"github.com/googleapis/enterprise-certificate-proxy/client"
 )
 
+// Version is generally set by the build command. Releases of ECP must have a specific version set.
+// The version can be set when running `go build` like so `-ldflags="-X=main.Version=$CURRENT_TAG" `.
+var Version = "dev"
+
 // If ECP Logging is enabled return true
 // Otherwise return false
 func enableECPLogging() bool {
@@ -69,6 +73,13 @@ func getCertPem(configFilePath string) []byte {
 		certChainPem = append(certChainPem, certPem...)
 	}
 	return certChainPem
+}
+
+// Returns ECP's version number.
+//
+//export ECPVersion
+func ECPVersion() *C.char {
+	return C.CString(Version)
 }
 
 // GetCertPem reads the contents of the certificate specified by configFilePath,
