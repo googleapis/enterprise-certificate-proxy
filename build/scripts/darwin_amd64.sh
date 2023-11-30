@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -eu
+set -eux
+
+CURRENT_TAG=$(cat version.txt)
 
 # Create a folder to hold the binaries
 rm -rf ./build/bin/darwin_amd64
@@ -26,5 +28,5 @@ mv darwin ./../../../build/bin/darwin_amd64/ecp
 cd ./../../..
 
 # Build the signer library
-go build -buildmode=c-shared -o build/bin/darwin_amd64/libecp.dylib cshared/main.go
+go build -buildmode=c-shared -buildmode=c-shared -ldflags="-X=main.Version=$CURRENT_TAG" -o build/bin/darwin_amd64/libecp.dylib cshared/main.go
 rm build/bin/darwin_amd64/libecp.h
