@@ -36,7 +36,7 @@ jobs:
     - name: Create Binaries
       run: .\build\scripts\windows_amd64.ps1
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: windows_amd64
         path: .\build\bin\windows_amd64\*
