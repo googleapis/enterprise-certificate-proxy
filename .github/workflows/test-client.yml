@@ -25,7 +25,7 @@ jobs:
       run: go test -v ./client/...
 
     - name: Lint
-      uses: golangci/golangci-lint-action@v3
+      uses: golangci/golangci-lint-action@v4
       with:
         version: latest
         working-directory: ./client
