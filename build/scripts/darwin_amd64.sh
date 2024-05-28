@@ -28,5 +28,6 @@ mv darwin ./../../../build/bin/darwin_amd64/ecp
 cd ./../../..
 
 # Build the signer library
-go build -buildmode=c-shared -buildmode=c-shared -ldflags="-X=main.Version=$CURRENT_TAG" -o build/bin/darwin_amd64/libecp.dylib cshared/main.go
+go build -buildmode=c-shared  -ldflags="-X=main.Version=$CURRENT_TAG" -o build/bin/darwin_amd64/libecp.dylib cshared/main.go
+go build -buildmode=c-archive  -ldflags="-X=main.Version=$CURRENT_TAG" -o build/bin/darwin_amd64/libecp.a cshared/main.go
 rm build/bin/darwin_amd64/libecp.h
