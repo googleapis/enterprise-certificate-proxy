@@ -75,7 +75,7 @@ func getCertPem(configFilePath string) []byte {
 	return certChainPem
 }
 
-// Returns ECP's version number.
+// ECPVersion returns ECP's version number.
 //
 //export ECPVersion
 func ECPVersion() *C.char {
@@ -181,7 +181,7 @@ func Sign(configFilePath *C.char, digest *byte, digestLen int, sigHolder *byte, 
 //
 //export SignForPython
 func SignForPython(configFilePath *C.char, digest *byte, digestLen int, sigHolder *byte, sigHolderLen int) int {
-	return Sign(configFilePath, digest, digestLen, sigHolder, sigHolderLen);
+	return Sign(configFilePath, digest, digestLen, sigHolder, sigHolderLen)
 }
 
 // GetKeyType returns a string representing ECP's key type.
