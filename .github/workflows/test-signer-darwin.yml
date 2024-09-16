@@ -45,12 +45,12 @@ jobs:
     - name: Create Binaries
       run: ./build/scripts/darwin_amd64.sh && ./build/scripts/darwin_arm64.sh
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: darwin_amd64
         path: ./build/bin/darwin_amd64/*
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: darwin_arm64
         path: ./build/bin/darwin_arm64/*
