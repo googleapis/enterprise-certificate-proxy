@@ -35,6 +35,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"runtime"
 	"sync"
 	"time"
@@ -579,4 +580,61 @@ func (k *Key) Decrypt(ciphertext []byte, opts crypto.DecrypterOpts) ([]byte, err
 
 	plaintext := cfDataToBytes(bytes)
 	return plaintext, cfErrorFromRef(cfErr)
+}
+
+var osStatusDescriptions = map[C.OSStatus]string{
+	C.errSecSuccess:               "No error",
+	C.errSecUnimplemented:         "Function or operation not implemented.",
+	C.errSecParam:                 "One or more parameters passed to the function were not valid.",
+	C.errSecAllocate:              "Failed to allocate memory.",
+	C.errSecNotAvailable:          "No keychain is available. You may need to restart your computer.",
+	C.errSecDuplicateItem:         "The specified item already exists in the keychain.",
+	C.errSecItemNotFound:          "The specified item could not be found in the keychain.",
+	C.errSecInteractionNotAllowed: "User interaction is not allowed.",
+	C.errSecDecode:                "Unable to decode the provided data.",
+	C.errSecPolicyNotFound:        "The specified policy could not be found.",
+	C.errSecPkcs12VerifyFailure:   "MAC verification failed during PKCS12 import (wrong password?)",
+}
+
+// Helper function to get OSStatus description
+// See (https://cdn.nsoftware.com/help/legacy/sbb/ref_err_appleerrorcodes.html)
+func osStatusDescription(status C.OSStatus) string {
+	if description, ok := osStatusDescriptions[status]; ok {
+		return description
+	}
+	return "Unknown OSStatus"
+}
+
+// ImportPKCS12Cred imports a PKCS12 file containing a client certificate and private key into the keychain
+func ImportPKCS12Cred(credPath string, password string) error {
+	// 1. Load the .p12 file
+	keyData, err := ioutil.ReadFile(credPath)
+	if err != nil {
+		return fmt.Errorf("error reading private key file: %w", err)
+	}
+
+	// 2. Create options dictionary with password
+	optionsKeys := []C.CFTypeRef{
+		C.CFTypeRef(C.kSecImportExportPassphrase),
+	}
+	optionsValues := []C.CFTypeRef{
+		C.CFTypeRef(C.CFStringCreateWithCString(C.kCFAllocatorDefault, C.CString(password), C.kCFStringEncodingUTF8)),
+	}
+
+	optionsDict := C.CFDictionaryCreate(C.kCFAllocatorDefault,
+		(*unsafe.Pointer)(unsafe.Pointer(&optionsKeys[0])),
+		(*unsafe.Pointer)(unsafe.Pointer(&optionsValues[0])),
+		C.CFIndex(len(optionsKeys)),
+		&C.kCFTypeDictionaryKeyCallBacks,
+		&C.kCFTypeDictionaryValueCallBacks,
+	)
+	defer C.CFRelease(C.CFTypeRef(optionsDict))
+
+	// 3. Import the .p12 data with password
+	status := C.SecPKCS12Import(bytesToCFData(keyData), optionsDict, nil)
+	if status != C.errSecSuccess {
+		return fmt.Errorf("failed to import PKCS#12 data: %s", osStatusDescription(status))
+	}
+
+	return nil
 }

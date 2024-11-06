@@ -51,6 +51,16 @@ func TestBytesToCFDataRoundTrip(t *testing.T) {
 	}
 }
 
+func TestImportPKCS12Cred(t *testing.T) {
+	certPath := "../../testdata/testcred.p12"
+	password := "1234"
+	err := ImportPKCS12Cred(certPath, password)
+	if err != nil {
+		t.Errorf("ImportPKCS12Cred: got %v, want nil err", err)
+		return
+	}
+}
+
 func TestEncrypt(t *testing.T) {
 	key, err := Cred(testIssuer)
 	if err != nil {
