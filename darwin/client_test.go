@@ -14,9 +14,7 @@
 package darwin
 
 import (
-	"bytes"
 	"crypto"
-	"crypto/rsa"
 	"testing"
 )
 
@@ -36,20 +34,12 @@ func TestClientEncrypt(t *testing.T) {
 	}
 }
 
-func TestClientDecrypt(t *testing.T) {
-	secureKey, err := NewSecureKey(testIssuer)
+func TestImportPKCS12Cred(t *testing.T) {
+	credPath := "../testdata/testcred.p12"
+	password := "1234"
+	err := ImportPKCS12Cred(credPath, password)
 	if err != nil {
-		t.Errorf("Cred: got %v, want nil err", err)
+		t.Errorf("ImportPKCS12Cred: got %v, want nil err", err)
 		return
-	}
-	byteSlice := []byte("Plain text to encrypt")
-	ciphertext, _ := secureKey.Encrypt(nil, byteSlice, crypto.SHA256)
-	plaintext, err := secureKey.Decrypt(nil, ciphertext, &rsa.OAEPOptions{Hash: crypto.SHA256})
-	if err != nil {
-		t.Errorf("Client API decryption: got %v, want nil err", err)
-		return
-	}
-	if !bytes.Equal(byteSlice, plaintext) {
-		t.Errorf("Decryption message does not match original: got %v, want %v", plaintext, byteSlice)
 	}
 }
