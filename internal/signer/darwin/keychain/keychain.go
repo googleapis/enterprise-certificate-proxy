@@ -35,7 +35,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -608,7 +608,7 @@ func osStatusDescription(status C.OSStatus) string {
 // ImportPKCS12Cred imports a PKCS12 file containing a client certificate and private key into the keychain
 func ImportPKCS12Cred(credPath string, password string) error {
 	// 1. Load the .p12 file
-	keyData, err := ioutil.ReadFile(credPath)
+	keyData, err := os.ReadFile(credPath)
 	if err != nil {
 		return fmt.Errorf("error reading private key file: %w", err)
 	}
