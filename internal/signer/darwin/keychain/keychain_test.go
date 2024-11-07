@@ -52,9 +52,9 @@ func TestBytesToCFDataRoundTrip(t *testing.T) {
 }
 
 func TestImportPKCS12Cred(t *testing.T) {
-	certPath := "../../testdata/testcred.p12"
+	credPath := "../../testdata/testcred.p12"
 	password := "1234"
-	err := ImportPKCS12Cred(certPath, password)
+	err := ImportPKCS12Cred(credPath, password)
 	if err != nil {
 		t.Errorf("ImportPKCS12Cred: got %v, want nil err", err)
 		return

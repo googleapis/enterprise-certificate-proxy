@@ -73,5 +73,5 @@ func NewSecureKey(issuerCN string) (*SecureKey, error) {
 
 // ImportPKCS12Cred imports a PKCS12 file containing a client certificate and private key into the keychain
 func ImportPKCS12Cred(credPath, password string) error {
-	return keychain.ImportPKCS12Cred(certPath, password)
+	return keychain.ImportPKCS12Cred(credPath, password)
 }

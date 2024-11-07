@@ -24,22 +24,33 @@ jobs:
 
       # The binary must be built before creating credentials so it can be added
       # as a trusted application to the keychain.
-    - name: Build Test Binary
+    - name: Build Test Binary for Signer
       working-directory: ./internal/signer/darwin/keychain
       run: go test -c .
 
     - name: Create keychain credentials
       run: ./scripts/keychain_cred.sh
       
-    - name: Run Test Binary
+    - name: Run Test Binary for Signer
       working-directory: ./internal/signer/darwin/keychain
       run: ./keychain.test
+
+    - name: Test Darwin Client
+      working-directory: ./darwin
+      run: go test -v .
       
-    - name: Lint
+    - name: Lint Signer
       uses: golangci/golangci-lint-action@v3
       with:
         version: latest
         working-directory: ./internal/signer/darwin
+        args: -E gofmt --max-same-issues 0
+
+    - name: Lint Client
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: latest
+        working-directory: ./darwin
         args: -E gofmt --max-same-issues 0
 
     - name: Create Binaries
