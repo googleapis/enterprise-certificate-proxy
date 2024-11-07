@@ -14,9 +14,7 @@
 package darwin
 
 import (
-	"bytes"
 	"crypto"
-	"crypto/rsa"
 	"testing"
 )
 
