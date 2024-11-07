@@ -25,14 +25,14 @@ jobs:
       # The binary must be built before creating credentials so it can be added
       # as a trusted application to the keychain.
     - name: Build Test Binary
-      working-directory: ./internal/signer/darwin
-      run: go test -c ./keychain
+      working-directory: ./internal/signer/darwin/keychain
+      run: go test -c .
 
     - name: Create keychain credentials
       run: ./scripts/keychain_cred.sh
       
     - name: Run Test Binary
-      working-directory: ./internal/signer/darwin
+      working-directory: ./internal/signer/darwin/keychain
       run: ./keychain.test
       
     - name: Lint
