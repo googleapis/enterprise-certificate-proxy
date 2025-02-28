@@ -17,7 +17,7 @@ jobs:
       run: ./scripts/softhsm_setup.sh
 
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: 1.19
 
@@ -39,7 +39,7 @@ jobs:
     - name: Create Binaries
       run: ./build/scripts/linux_amd64.sh
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: linux_amd64
         path: ./build/bin/linux_amd64/*
