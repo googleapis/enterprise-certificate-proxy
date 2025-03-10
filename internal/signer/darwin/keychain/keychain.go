@@ -299,8 +299,7 @@ func findMatchingIdentities(keychainType string, issuerCN string) ([]C.SecIdenti
 		if err != nil {
 			return nil, nil, 0, fmt.Errorf("Error determining target keychain path: %w", err)
 		}
-		var filteredKeychainList C.CFMutableArrayRef
-		filteredKeychainList = C.CFArrayCreateMutable(C.kCFAllocatorDefault, 0, &C.kCFTypeArrayCallBacks)
+		filteredKeychainList := C.CFArrayCreateMutable(C.kCFAllocatorDefault, 0, &C.kCFTypeArrayCallBacks)
 		defer C.CFRelease(C.CFTypeRef(filteredKeychainList))
 		for i := 0; i < int(C.CFArrayGetCount(keychainList)); i++ {
 			keychainRef := C.CFArrayGetValueAtIndex(keychainList, C.CFIndex(i))
