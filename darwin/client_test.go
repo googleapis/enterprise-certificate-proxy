@@ -23,7 +23,7 @@ const testIssuer = "TestIssuer"
 func TestNewSecureKeyWithOptions(t *testing.T) {
 	opts := SecureKeyOptions{
 		IssuerCN:     testIssuer,
-		KeychainType: "login",
+		KeychainType: "all",
 	}
 	_, err := NewSecureKeyWithOptions(opts)
 	if err != nil {

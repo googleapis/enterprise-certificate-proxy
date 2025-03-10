@@ -23,7 +23,6 @@ package keychain
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/Security.h>
-
 */
 import "C"
 
