@@ -20,6 +20,18 @@ import (
 
 const testIssuer = "TestIssuer"
 
+func TestNewSecureKeyWithOptions(t *testing.T) {
+	opts := SecureKeyOptions{
+		IssuerCN:     testIssuer,
+		KeychainType: "login",
+	}
+	_, err := NewSecureKeyWithOptions(opts)
+	if err != nil {
+		t.Errorf("Cred: got %v, want nil err", err)
+		return
+	}
+}
+
 func TestClientEncrypt(t *testing.T) {
 	secureKey, err := NewSecureKey(testIssuer)
 	if err != nil {

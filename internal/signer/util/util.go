@@ -34,7 +34,8 @@ type CertConfigs struct {
 
 // MacOSKeychain contains keychain parameters describing the certificate to use.
 type MacOSKeychain struct {
-	Issuer string `json:"issuer"`
+	Issuer       string `json:"issuer"`
+	KeychainType string `json:"keychain_type"`
 }
 
 // WindowsStore contains Windows key store parameters describing the certificate to use.

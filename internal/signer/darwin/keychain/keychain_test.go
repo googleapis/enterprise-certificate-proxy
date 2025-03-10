@@ -62,7 +62,7 @@ func TestImportPKCS12Cred(t *testing.T) {
 }
 
 func TestEncrypt(t *testing.T) {
-	key, err := Cred(testIssuer)
+	key, err := Cred(testIssuer, "")
 	if err != nil {
 		t.Errorf("Cred: got %v, want nil err", err)
 		return
@@ -76,7 +76,7 @@ func TestEncrypt(t *testing.T) {
 }
 
 func BenchmarkEncrypt(b *testing.B) {
-	key, err := Cred(testIssuer)
+	key, err := Cred(testIssuer, "")
 	if err != nil {
 		b.Errorf("Cred: got %v, want nil err", err)
 		return
@@ -91,7 +91,7 @@ func BenchmarkEncrypt(b *testing.B) {
 }
 
 func TestDecrypt(t *testing.T) {
-	key, err := Cred(testIssuer)
+	key, err := Cred(testIssuer, "")
 	if err != nil {
 		t.Errorf("Cred: got %v, want nil err", err)
 		return
@@ -109,7 +109,7 @@ func TestDecrypt(t *testing.T) {
 }
 
 func BenchmarkDecrypt(b *testing.B) {
-	key, err := Cred(testIssuer)
+	key, err := Cred(testIssuer, "")
 	if err != nil {
 		b.Errorf("Cred: got %v, want nil err", err)
 		return

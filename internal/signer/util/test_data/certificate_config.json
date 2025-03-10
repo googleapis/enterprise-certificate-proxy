@@ -1,7 +1,8 @@
 {
   "cert_configs": {
     "macos_keychain": {
-      "issuer": "Google Endpoint Verification"
+      "issuer": "Google Endpoint Verification",
+      "keychain_type": "system"
     },
     "windows_store": {
       "issuer": "enterprise_v1_corp_client",
