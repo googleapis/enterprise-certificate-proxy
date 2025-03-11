@@ -36,6 +36,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/user"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
@@ -239,13 +241,36 @@ func (k *Key) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) (signa
 	return cfDataToBytes(C.CFDataRef(sig)), nil
 }
 
-// Cred gets the first Credential (filtering on issuer) corresponding to
-// available certificate and private key pairs (i.e. identities) available in
-// the Keychain. This includes both the current login keychain for the user,
-// and the system keychain.
-func Cred(issuerCN string) (*Key, error) {
+func getLoginKeychainPath() (string, error) {
+	usr, err := user.Current()
+	if err != nil {
+		return "", fmt.Errorf("could not get current user: %w", err)
+	}
+	return filepath.Join(usr.HomeDir, "Library", "Keychains", "login.keychain-db"), nil
+}
+
+func getSystemKeychainPath() (string, error) {
+	return "/Library/Keychains/System.keychain", nil
+}
+
+func getKeychainPath(keychainRef C.CFTypeRef) (string, error) {
+	var pathBuf [1024]C.char
+	pathLen := C.uint32_t(len(pathBuf))
+
+	status := C.SecKeychainGetPath(C.SecKeychainRef(keychainRef), &pathLen, &pathBuf[0])
+	if status != 0 {
+		return "", fmt.Errorf("SecKeychainGetPath failed: %d", status)
+	}
+
+	return C.GoStringN(&pathBuf[0], C.int(pathLen)), nil
+}
+
+// findMatchingIdentities returns a list of identities satisfying the keychainType and issuerCN criteria as "leafIdents".
+// It also returns the parsed leaf certificates as "leafs", and a pointer of the underlying "leafMatches" to be released by the caller.
+func findMatchingIdentities(keychainType string, issuerCN string) ([]C.SecIdentityRef, []*x509.Certificate, C.CFTypeRef, error) {
 	leafSearch := C.CFDictionaryCreateMutable(C.kCFAllocatorDefault, 5, &C.kCFTypeDictionaryKeyCallBacks, &C.kCFTypeDictionaryValueCallBacks)
 	defer C.CFRelease(C.CFTypeRef(unsafe.Pointer(leafSearch)))
+
 	// Get identities (certificate + private key pairs).
 	C.CFDictionaryAddValue(leafSearch, unsafe.Pointer(C.kSecClass), unsafe.Pointer(C.kSecClassIdentity))
 	// Get identities that are signing capable.
@@ -254,30 +279,136 @@ func Cred(issuerCN string) (*Key, error) {
 	C.CFDictionaryAddValue(leafSearch, unsafe.Pointer(C.kSecReturnRef), unsafe.Pointer(C.kCFBooleanTrue))
 	// Be sure to list out all the matches.
 	C.CFDictionaryAddValue(leafSearch, unsafe.Pointer(C.kSecMatchLimit), unsafe.Pointer(C.kSecMatchLimitAll))
-	// Do the matching-item copy.
-	var leafMatches C.CFTypeRef
-	if errno := C.SecItemCopyMatching((C.CFDictionaryRef)(leafSearch), &leafMatches); errno != C.errSecSuccess {
-		return nil, keychainError(errno)
+
+	// Obtain the total keychain search space for the user as a list of keychains.
+	var keychainList C.CFArrayRef
+	if err := C.SecKeychainCopySearchList(&keychainList); err != C.errSecSuccess {
+		return nil, nil, 0, fmt.Errorf("failed to get keychain search list: %w", keychainError(err))
 	}
-	defer C.CFRelease(leafMatches)
+	defer C.CFRelease(C.CFTypeRef(keychainList))
+
+	// Filter for login vs system keychain search space.
+	if keychainType == "login" || keychainType == "system" {
+		var targetPath string
+		var err error
+		if keychainType == "login" {
+			targetPath, err = getLoginKeychainPath()
+		} else {
+			targetPath, err = getSystemKeychainPath()
+		}
+		if err != nil {
+			return nil, nil, 0, fmt.Errorf("Error determining target keychain path: %w", err)
+		}
+		filteredKeychainList := C.CFArrayCreateMutable(C.kCFAllocatorDefault, 0, &C.kCFTypeArrayCallBacks)
+		defer C.CFRelease(C.CFTypeRef(filteredKeychainList))
+		for i := 0; i < int(C.CFArrayGetCount(keychainList)); i++ {
+			keychainRef := C.CFArrayGetValueAtIndex(keychainList, C.CFIndex(i))
+			keychainPath, err := getKeychainPath(C.CFTypeRef(keychainRef))
+			if err != nil {
+				return nil, nil, 0, fmt.Errorf("Error extracting keychain path: %w", err)
+			}
+			if keychainPath == targetPath {
+				C.CFArrayAppendValue(filteredKeychainList, keychainRef)
+			}
+		}
+		keychainList = C.CFArrayRef(filteredKeychainList)
+	} else if keychainType != "all" && keychainType != "" {
+		return nil, nil, 0, fmt.Errorf("invalid keychain type: %s", keychainType)
+	}
+
+	// Restrict keychain search space
+	C.CFDictionaryAddValue(leafSearch, unsafe.Pointer(C.kSecMatchSearchList), unsafe.Pointer(keychainList))
+
+	var leafMatches C.CFTypeRef
+	if errno := C.SecItemCopyMatching(C.CFDictionaryRef(leafSearch), &leafMatches); errno != C.errSecSuccess {
+		return nil, nil, 0, fmt.Errorf("failed to find matching identities: %w", keychainError(errno))
+	}
+
 	signingIdents := C.CFArrayRef(leafMatches)
-	// Dump the certs into golang x509 Certificates.
-	var (
-		leafIdent C.SecIdentityRef
-		leaf      *x509.Certificate
-	)
-	// Find the first valid leaf whose issuer (CA) matches the name in filter.
-	// Validation in identityToX509 covers Not Before, Not After and key alg.
-	for i := 0; i < int(C.CFArrayGetCount(signingIdents)) && leaf == nil; i++ {
+	var leafIdents []C.SecIdentityRef
+	var leafs []*x509.Certificate
+
+	for i := 0; i < int(C.CFArrayGetCount(signingIdents)); i++ {
 		identDict := C.CFArrayGetValueAtIndex(signingIdents, C.CFIndex(i))
 		xc, err := identityToX509(C.SecIdentityRef(identDict))
 		if err != nil {
-			continue
+			continue // Skip this identity if there's an error
 		}
 		if xc.Issuer.CommonName == issuerCN {
-			leaf = xc
-			leafIdent = C.SecIdentityRef(identDict)
+			leafs = append(leafs, xc)
+			leafIdents = append(leafIdents, C.SecIdentityRef(identDict))
 		}
+	}
+
+	return leafIdents, leafs, leafMatches, nil
+}
+
+// compareCertificatesByRaw compares two certificates for exact byte-for-byte equality.
+// It returns true if and only if the certificates have identical DER-encoded representations.
+func compareCertificatesByRaw(cert1, cert2 *x509.Certificate) bool {
+	if cert1 == nil || cert2 == nil {
+		return cert1 == cert2 // True only if both are nil
+	}
+	return bytes.Equal(cert1.Raw, cert2.Raw)
+}
+
+// Cred gets the first Credential (filtering on issuer and keychainType) corresponding to
+// available certificate and private key pairs (i.e. identities) in
+// the Keychain. Accepted values for keychainType are "login", "system", and "all".
+// For backwards compatibility, an empty keychainType will be treated as "all".
+func Cred(issuerCN, keychainType string) (*Key, error) {
+	leafIdents, leafs, leafMatches, err := findMatchingIdentities(keychainType, issuerCN)
+	if err != nil {
+		return nil, err
+	}
+	defer C.CFRelease(leafMatches)
+
+	// If system keychain, we need to do an extra query for login, and subtract that from the final results.
+	// This is because of a quirk with Apple's kSecMatchSearchList API, which incorrectly returns results
+	// from both the login and system keychain when we retrict the search space to system only.
+	if keychainType == "system" {
+		loginLeafIdents, _, loginLeafMatches, err := findMatchingIdentities("login", issuerCN)
+		if err != nil {
+			return nil, err
+		}
+		defer C.CFRelease(loginLeafMatches)
+
+		var filteredLeafIdents []C.SecIdentityRef
+		var filteredLeafs []*x509.Certificate
+
+	outerLoop:
+		for i, systemIdent := range leafIdents {
+			systemCert, err1 := identityToX509(systemIdent)
+			if err1 != nil {
+				continue // Skip if we can't get the certificate
+			}
+			for _, loginIdent := range loginLeafIdents {
+				loginCert, err2 := identityToX509(loginIdent)
+				if err2 != nil {
+					continue //Skip if we can't get the certificate
+				}
+				if compareCertificatesByRaw(systemCert, loginCert) {
+					continue outerLoop // Found a match, skip this login identity.
+				}
+			}
+			// If we get here, no match was found in loginLeafIdents, so it's safe to append to our filtered results.
+			filteredLeafIdents = append(filteredLeafIdents, systemIdent)
+			filteredLeafs = append(filteredLeafs, leafs[i])
+		}
+
+		leafIdents = filteredLeafIdents
+		leafs = filteredLeafs
+	}
+
+	var leaf *x509.Certificate
+	var leafIdent C.SecIdentityRef
+
+	// Select the first match from the final results.
+	if len(leafs) > 0 {
+		leaf = leafs[0]
+		leafIdent = leafIdents[0]
+	} else {
+		return nil, fmt.Errorf("no key found with issuer common name %q", issuerCN)
 	}
 
 	caSearch := C.CFDictionaryCreateMutable(C.kCFAllocatorDefault, 0, &C.kCFTypeDictionaryKeyCallBacks, &C.kCFTypeDictionaryValueCallBacks)

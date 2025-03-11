@@ -30,6 +30,12 @@ type SecureKey struct {
 	key *keychain.Key
 }
 
+// SecureKeyOptions encapsulates all supported keychain parameters
+type SecureKeyOptions struct {
+	IssuerCN     string
+	KeychainType string
+}
+
 // CertificateChain returns the SecureKey's raw X509 cert chain. This contains the public key.
 func (sk *SecureKey) CertificateChain() [][]byte {
 	return sk.key.CertificateChain()
@@ -64,7 +70,17 @@ func (sk *SecureKey) Close() {
 // the MacOS Keychain matching the issuer CN filter. This includes both the current login keychain
 // for the user as well as the system keychain.
 func NewSecureKey(issuerCN string) (*SecureKey, error) {
-	k, err := keychain.Cred(issuerCN)
+	k, err := keychain.Cred(issuerCN, "")
+	if err != nil {
+		return nil, err
+	}
+	return &SecureKey{key: k}, nil
+}
+
+// NewSecureKeyWithOptions returns a handle to the first available certificate and private key pair in
+// the MacOS Keychain matching the SecureKeyOptions filter.
+func NewSecureKeyWithOptions(options SecureKeyOptions) (*SecureKey, error) {
+	k, err := keychain.Cred(options.IssuerCN, options.KeychainType)
 	if err != nil {
 		return nil, err
 	}

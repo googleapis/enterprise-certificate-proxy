@@ -27,6 +27,10 @@ func TestLoadConfig(t *testing.T) {
 	if config.CertConfigs.MacOSKeychain.Issuer != want {
 		t.Errorf("Expected issuer is %q, got: %q", want, config.CertConfigs.MacOSKeychain.Issuer)
 	}
+	want = "system"
+	if config.CertConfigs.MacOSKeychain.KeychainType != want {
+		t.Errorf("Expected keychain type is %q, got: %q", want, config.CertConfigs.MacOSKeychain.KeychainType)
+	}
 
 	// windows
 	want = "enterprise_v1_corp_client"
