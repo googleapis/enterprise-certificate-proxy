@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -10,7 +11,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -84,33 +84,53 @@ func initConfigFromFlags() (*ProxyConfig, error) {
 	return proxy_config, nil
 }
 
-// ProxyHandler is a simple HTTP proxy that forwards requests to a target server.
-type ProxyHandler struct {
+type TLSErrorResponse struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Error   string `json:"error"`
+}
+
+func writeTLSError(w http.ResponseWriter, originalErrorStr string, errorMsg string, statusCode int) {
+	log.Printf("writeTLSError: Writing TLS error response: %s (status %d)", errorMsg, statusCode)
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Goog-EcpProxy-Error", "mtls_connection_error")
+	w.WriteHeader(statusCode)
+
+	resp := TLSErrorResponse{
+		Message: errorMsg,
+		Code:    statusCode,
+		Error:   originalErrorStr,
+	}
+
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (p *ECPProxy) handleError(w http.ResponseWriter, err error) {
+	writeTLSError(w, err.Error(), "ECP Proxy error: "+err.Error(), http.StatusBadGateway)
+}
+
+// ECPProxy is a simple HTTP proxy that forwards requests to a target server.
+type ECPProxy struct {
 	Transport http.RoundTripper
 }
 
-func (p *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	targetStr := r.Header.Get(targetHostHeader)
-	if targetStr == "" {
-		http.Error(w, targetHostHeader+" header is required", http.StatusBadRequest)
-		return
-	}
-	targetURL, err := url.Parse(targetStr)
-	if err != nil || targetURL.Host == "" {
-		http.Error(w, "Invalid "+targetHostHeader+" header", http.StatusBadRequest)
+func (p *ECPProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	targetHost := r.Header.Get(targetHostHeader)
+	if targetHost == "" {
+		p.handleError(w, fmt.Errorf("%s header is required", targetHostHeader))
 		return
 	}
 
 	// Set this to the desired Host header for the final destination
 	// (i.e., the original Host requested by gcloud, like storage.mtls.googleapis.com).
-	r.Host = targetURL.Host
+	r.Host = targetHost
 	r.URL.Scheme = "https"
-	r.URL.Host = targetURL.Host
+	r.URL.Host = targetHost
 
 	resp, err := p.Transport.RoundTrip(r)
 	if err != nil {
 		log.Printf("Failed to round trip request: %v", err)
-		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+		p.handleError(w, err)
 		return
 	}
 	defer resp.Body.Close()
@@ -126,8 +146,8 @@ func (p *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, resp.Body)
 }
 
-// newProxyHandler creates a new ProxyHandler instance with the given configuration.
-func newProxyHandler(proxy_config *ProxyConfig, key *client.Key) *ProxyHandler {
+// newECPProxy creates a new ECPProxy instance with the given configuration.
+func newECPProxy(proxy_config *ProxyConfig, key *client.Key) *ECPProxy {
 	tlsCert := &tls.Certificate{
 		Certificate: key.CertificateChain(),
 		PrivateKey:  key,
@@ -152,15 +172,15 @@ func newProxyHandler(proxy_config *ProxyConfig, key *client.Key) *ProxyHandler {
 		}).DialContext,
 		IdleConnTimeout: proxy_config.IdleConnTimeout, // Keep idle connections for reuse
 	}
-	return &ProxyHandler{
+	return &ECPProxy{
 		Transport: transport,
 	}
 }
 
-func runProxyWrapper(proxyHandler *ProxyHandler, proxy_config *ProxyConfig, shutdownChan chan struct{}) {
+func runProxyWrapper(proxy_config *ProxyConfig, ecp_proxy *ECPProxy, shutdownChan chan struct{}) {
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", proxy_config.Port),
-		Handler: proxyHandler,
+		Handler: ecp_proxy,
 	}
 
 	// Start a goroutine that listens for shutdown signal.
@@ -194,7 +214,7 @@ func main() {
 		log.Fatalf("Failed to get ECP credential: %v", err)
 	}
 	defer key.Close()
-	proxy := newProxyHandler(proxy_config, key)
+	ecp_proxy := newECPProxy(proxy_config, key)
 
 	// Create a channel to listen for OS signals.
 	signalChan := make(chan os.Signal, 1)
@@ -210,6 +230,6 @@ func main() {
 		close(shutdownChan)
 	}()
 
-	runProxyWrapper(proxy, proxy_config, shutdownChan)
+	runProxyWrapper(proxy_config, ecp_proxy, shutdownChan)
 	log.Println("Proxy server shut down gracefully.")
 }
