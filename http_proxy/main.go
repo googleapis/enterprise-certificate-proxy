@@ -11,6 +11,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,6 +22,7 @@ import (
 
 const (
 	targetHostHeader         = "X-Goog-EcpProxy-Target-Host"
+	ecpInternalErrorHeader   = "X-Goog-EcpProxy-Error"
 	proxyTLSHandshakeTimeout = 10 * time.Second
 	proxyRequestTimeout      = 15 * time.Second
 	proxyDialTimeout         = 5 * time.Second
@@ -35,6 +37,9 @@ type ProxyConfig struct {
 	Port int
 	// EnterpriseCertificateFilePath is the path to the enterprise certificate file.
 	EnterpriseCertificateFilePath string
+
+	// GcloudConfiguredProxyURL is the URL that gcloud is configured to use for the proxy.
+	GcloudConfiguredProxyURL string
 
 	// Controls the maximum time to wait for a TLS handshake.
 	TLSHandshakeTimeout time.Duration
@@ -69,6 +74,7 @@ func initConfigFromFlags() (*ProxyConfig, error) {
 	proxy_config := &ProxyConfig{}
 	flag.IntVar(&proxy_config.Port, "port", 0, "The port to listen on for HTTP requests. (Required)")
 	flag.StringVar(&proxy_config.EnterpriseCertificateFilePath, "enterprise_certificate_file_path", "", "The path to the enterprise certificate file. (Required)")
+	flag.StringVar(&proxy_config.GcloudConfiguredProxyURL, "gcloud_configured_proxy_url", "", "The URL that gcloud is configured to use for the proxy.")
 	flag.Parse()
 
 	proxy_config.TLSHandshakeTimeout = proxyTLSHandshakeTimeout
@@ -91,9 +97,8 @@ type TLSErrorResponse struct {
 }
 
 func writeTLSError(w http.ResponseWriter, originalErrorStr string, errorMsg string, statusCode int) {
-	log.Printf("writeTLSError: Writing TLS error response: %s (status %d)", errorMsg, statusCode)
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("X-Goog-EcpProxy-Error", "mtls_connection_error")
+	w.Header().Set(ecpInternalErrorHeader, "mtls_connection_error")
 	w.WriteHeader(statusCode)
 
 	resp := TLSErrorResponse{
@@ -147,7 +152,7 @@ func (p *ECPProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // newECPProxy creates a new ECPProxy instance with the given configuration.
-func newECPProxy(proxy_config *ProxyConfig, key *client.Key) *ECPProxy {
+func newECPProxy(proxy_config *ProxyConfig, key *client.Key) (*ECPProxy, error) {
 	tlsCert := &tls.Certificate{
 		Certificate: key.CertificateChain(),
 		PrivateKey:  key,
@@ -172,9 +177,19 @@ func newECPProxy(proxy_config *ProxyConfig, key *client.Key) *ECPProxy {
 		}).DialContext,
 		IdleConnTimeout: proxy_config.IdleConnTimeout, // Keep idle connections for reuse
 	}
+
+	if proxy_config.GcloudConfiguredProxyURL != "" {
+		proxyURL, err := url.Parse(proxy_config.GcloudConfiguredProxyURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse gcloud_configured_proxy_url: %v", err)
+		}
+		transport.Proxy = http.ProxyURL(proxyURL)
+		log.Printf("Using gcloud-configured proxy URL: %s", proxy_config.GcloudConfiguredProxyURL)
+	}
+
 	return &ECPProxy{
 		Transport: transport,
-	}
+	}, nil
 }
 
 func runProxyWrapper(proxy_config *ProxyConfig, ecp_proxy *ECPProxy, shutdownChan chan struct{}) {
@@ -214,8 +229,12 @@ func main() {
 		log.Fatalf("Failed to get ECP credential: %v", err)
 	}
 	defer key.Close()
-	ecp_proxy := newECPProxy(proxy_config, key)
+	ecp_proxy, err := newECPProxy(proxy_config, key)
+	if err != nil {
+		log.Fatalf("Failed to create ECP Proxy: %v", err)
+	}
 
+	// Set up signal handling for graceful shutdown.
 	// Create a channel to listen for OS signals.
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
