@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"regexp"
 	"syscall"
 	"time"
 
@@ -30,6 +31,8 @@ const (
 	proxyIdleConnTimeout     = 30 * time.Second
 	proxyShutdownTimeout     = 1 * time.Second
 )
+
+var mtlsGoogleapisHostRegex = regexp.MustCompile(`^[a-z0-9-]+\.mtls\.googleapis\.com$`)
 
 // ProxyConfig holds the configuration for the proxy server.
 type ProxyConfig struct {
@@ -110,8 +113,8 @@ func writeTLSError(w http.ResponseWriter, originalErrorStr string, errorMsg stri
 	json.NewEncoder(w).Encode(resp)
 }
 
-func (p *ECPProxy) handleError(w http.ResponseWriter, err error) {
-	writeTLSError(w, err.Error(), "ECP Proxy error: "+err.Error(), http.StatusBadGateway)
+func (p *ECPProxy) handleError(w http.ResponseWriter, err error, statusCode int) {
+	writeTLSError(w, err.Error(), "ECP Proxy error: "+err.Error(), statusCode)
 }
 
 // ECPProxy is a simple HTTP proxy that forwards requests to a target server.
@@ -119,10 +122,21 @@ type ECPProxy struct {
 	Transport http.RoundTripper
 }
 
+// isAllowedHost checks if the host is allowed.
+func isAllowedHost(host string) bool {
+	return mtlsGoogleapisHostRegex.MatchString(host)
+}
+
 func (p *ECPProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	targetHost := r.Header.Get(targetHostHeader)
 	if targetHost == "" {
-		p.handleError(w, fmt.Errorf("%s header is required", targetHostHeader))
+		p.handleError(w, fmt.Errorf("%s header is required", targetHostHeader), http.StatusBadRequest)
+		return
+	}
+
+	// Check if the target host is allowed.
+	if !isAllowedHost(targetHost) {
+		p.handleError(w, fmt.Errorf("target host %s is not allowed", targetHost), http.StatusForbidden)
 		return
 	}
 
@@ -135,7 +149,7 @@ func (p *ECPProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resp, err := p.Transport.RoundTrip(r)
 	if err != nil {
 		log.Printf("Failed to round trip request: %v", err)
-		p.handleError(w, err)
+		p.handleError(w, err, http.StatusBadGateway)
 		return
 	}
 	defer resp.Body.Close()
