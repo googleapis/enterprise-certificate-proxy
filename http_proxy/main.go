@@ -1,3 +1,8 @@
+// Package main implements a local forwarding proxy (LocalECPProxy) that uses
+// an Enterprise Certificate Proxy (ECP) client to handle mTLS handshakes.
+// The proxy listens for HTTP requests, validates them, and forwards them to
+// a target host specified in a custom HTTP header. It is designed to run
+// locally and can be configured via command-line flags.
 package main
 
 import (
@@ -21,11 +26,15 @@ import (
 )
 
 const (
-	targetHostHeader       = "X-Goog-EcpProxy-Target-Host"
+	// targetHostHeader is the custom HTTP header used by clients to specify the
+	// destination host for the proxy to forward the request to.
+	targetHostHeader = "X-Goog-EcpProxy-Target-Host"
+	// ecpInternalErrorHeader is a custom HTTP header added to error responses
+	// to indicate that the error originated within the LocalECPProxy.
 	ecpInternalErrorHeader = "X-Goog-EcpProxy-Error"
 )
 
-// Default timeouts and configurations
+// Default timeouts and configurations for the HTTP client and server.
 const (
 	defaultTLSHandshakeTimeout = 10 * time.Second
 	defaultProxyRequestTimeout = 15 * time.Second
@@ -35,24 +44,60 @@ const (
 	defaultShutdownTimeout     = 5 * time.Second
 )
 
+// mtlsGoogleapisHostRegex is a regular expression that validates whether a target
+// host conforms to the "*.mtls.googleapis.com" pattern. This is a security
+// measure to ensure the proxy only connects to allowed endpoints.
 var mtlsGoogleapisHostRegex = regexp.MustCompile(`^[a-z0-9-]+\.mtls\.googleapis\.com$`)
 
-// ProxyConfig holds the configuration for the proxy server.
-type ProxyConfig struct {
+// AppConfig holds the application configuration parsed from command-line flags.
+type AppConfig struct {
 	Port                          int
 	EnterpriseCertificateFilePath string
 	GcloudConfiguredProxyURL      string
-	TLSHandshakeTimeout           time.Duration
-	ProxyRequestTimeout           time.Duration
-	DialTimeout                   time.Duration
-	KeepAlivePeriod               time.Duration
-	IdleConnTimeout               time.Duration
-	ShutdownTimeout               time.Duration
 }
 
-// newProxyConfigFromFlags creates a new ProxyConfig and populates it from command-line flags.
-func newProxyConfigFromFlags() (*ProxyConfig, error) {
-	cfg := &ProxyConfig{
+func (cfg *AppConfig) validate() error {
+	if cfg.Port <= 0 {
+		return errors.New("port is required and must be a positive integer")
+	}
+	if cfg.EnterpriseCertificateFilePath == "" {
+		return errors.New("enterprise_certificate_file_path is required")
+	}
+	return nil
+}
+
+// newAppConfigFromFlags parses command-line flags, validates them, and returns a new AppConfig.
+func newAppConfigFromFlags() (*AppConfig, error) {
+	cfg := &AppConfig{}
+	flag.IntVar(&cfg.Port, "port", 0, "The port to listen on for HTTP requests. (Required)")
+	flag.StringVar(&cfg.EnterpriseCertificateFilePath, "enterprise_certificate_file_path", "", "The path to the enterprise certificate file. (Required)")
+	flag.StringVar(&cfg.GcloudConfiguredProxyURL, "gcloud_configured_proxy_url", "", "The URL that gcloud is configured to use for the proxy.")
+	flag.Parse()
+
+	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}
+
+// ProxyConfig holds the configuration for the proxy server.
+type ProxyConfig struct {
+	Port                int // The port for the proxy server to listen on.
+	AllowedHostsRegex   *regexp.Regexp
+	TlsConfig           *tls.Config
+	ProxyURL            *url.URL
+	TLSHandshakeTimeout time.Duration // Max duration for TLS handshake to the target.
+	ProxyRequestTimeout time.Duration // Max duration for the entire proxy request.
+	DialTimeout         time.Duration // Max duration for establishing a TCP connection.
+	KeepAlivePeriod     time.Duration // Period for TCP keep-alives.
+	IdleConnTimeout     time.Duration // Max duration an idle connection is kept alive.
+	ShutdownTimeout     time.Duration // Max duration to wait for graceful shutdown.
+}
+
+// newDefaultProxyConfig creates a new ProxyConfig with default values for timeouts.
+func newDefaultProxyConfig() *ProxyConfig {
+	return &ProxyConfig{
 		TLSHandshakeTimeout: defaultTLSHandshakeTimeout,
 		ProxyRequestTimeout: defaultProxyRequestTimeout,
 		DialTimeout:         defaultDialTimeout,
@@ -60,28 +105,18 @@ func newProxyConfigFromFlags() (*ProxyConfig, error) {
 		IdleConnTimeout:     defaultIdleConnTimeout,
 		ShutdownTimeout:     defaultShutdownTimeout,
 	}
-
-	flag.IntVar(&cfg.Port, "port", 0, "The port to listen on for HTTP requests. (Required)")
-	flag.StringVar(&cfg.EnterpriseCertificateFilePath, "enterprise_certificate_file_path", "", "The path to the enterprise certificate file. (Required)")
-	flag.StringVar(&cfg.GcloudConfiguredProxyURL, "gcloud_configured_proxy_url", "", "The URL that gcloud is configured to use for the proxy.")
-	flag.Parse()
-
-	if cfg.Port <= 0 {
-		return nil, errors.New("port is required and must be a positive integer")
-	}
-	if cfg.EnterpriseCertificateFilePath == "" {
-		return nil, errors.New("enterprise_certificate_file_path is required")
-	}
-	return cfg, nil
 }
 
-// ErrorResponse defines the structure for a JSON error response.
+// ErrorResponse defines the structure for a JSON error response sent to the client.
 type ErrorResponse struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Error   string `json:"error"`
 }
 
+// writeError formats an error into the standard JSON ErrorResponse structure
+// and writes it to the http.ResponseWriter with the specified status code.
+// It also sets a custom header to indicate the error originated from this proxy.
 func writeError(w http.ResponseWriter, originalError error, errorMsg string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set(ecpInternalErrorHeader, "true")
@@ -98,22 +133,18 @@ func writeError(w http.ResponseWriter, originalError error, errorMsg string, sta
 	}
 }
 
-// isAllowedHost checks if the host is allowed.
-func isAllowedHost(host string) bool {
-	return mtlsGoogleapisHostRegex.MatchString(host)
+// isAllowedHost checks if the provided host string matches the predefined
+// regular expression for allowed hosts.
+func isAllowedHost(allowedHostsRegex *regexp.Regexp, host string) bool {
+	return allowedHostsRegex.MatchString(host)
 }
 
-// newECPTransport creates http.Transport needed for mTLS.
-func newECPTransport(proxyConfig *ProxyConfig, key *client.Key) (http.RoundTripper, error) {
-	tlsCert := &tls.Certificate{
-		Certificate: key.CertificateChain(),
-		PrivateKey:  key,
-	}
-
+// newECPProxyTransport creates an http.RoundTripper (specifically, an http.Transport)
+// configured to perform mTLS using a credential loaded from the ECP client.
+// It also configures an optional upstream proxy if one is provided in the configuration.
+func newECPProxyTransport(proxyConfig *ProxyConfig) http.RoundTripper {
 	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			Certificates: []tls.Certificate{*tlsCert},
-		},
+		TLSClientConfig:       proxyConfig.TlsConfig,
 		TLSHandshakeTimeout:   proxyConfig.TLSHandshakeTimeout,
 		ResponseHeaderTimeout: proxyConfig.ProxyRequestTimeout,
 		DialContext: (&net.Dialer{
@@ -123,22 +154,23 @@ func newECPTransport(proxyConfig *ProxyConfig, key *client.Key) (http.RoundTripp
 		IdleConnTimeout: proxyConfig.IdleConnTimeout,
 	}
 
-	if proxyConfig.GcloudConfiguredProxyURL != "" {
-		proxyURL, err := url.Parse(proxyConfig.GcloudConfiguredProxyURL)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse gcloud_configured_proxy_url: %w", err)
-		}
-		transport.Proxy = http.ProxyURL(proxyURL)
-		log.Printf("Using gcloud-configured proxy URL: %s", proxyConfig.GcloudConfiguredProxyURL)
+	// If an upstream proxy is configured, set it on the transport.
+	if proxyConfig.ProxyURL != nil {
+		transport.Proxy = http.ProxyURL(proxyConfig.ProxyURL)
+		log.Printf("Using gcloud-configured proxy URL: %s", proxyConfig.ProxyURL)
 	}
-	return transport, nil
+	return transport
 }
 
-// newProxyHandler creates a proxy handler using httputil.ReverseProxy.
-func newProxyHandler(transport http.RoundTripper) http.Handler {
+// newECPProxyHandler creates the primary http.Handler for the ECP Proxy server.
+// It uses httputil.ReverseProxy to forward requests. Before forwarding, it
+// performs validation on the incoming request to ensure it is well-formed
+// and targeting an allowed host.
+func newECPProxyHandler(proxyConfig *ProxyConfig, transport http.RoundTripper) http.Handler {
 	proxy := &httputil.ReverseProxy{
-		// The Director is called for every request and is responsible for
-		// modifying it before it's sent to the target.
+		// Director modifies the request just before it is sent to the target.
+		// It reads the target host from our custom header, sets the request URL,
+		// and removes the custom header to avoid leaking it.
 		Director: func(req *http.Request) {
 			targetHost := req.Header.Get(targetHostHeader)
 			// We clear the header so it's not sent to the destination.
@@ -149,9 +181,11 @@ func newProxyHandler(transport http.RoundTripper) http.Handler {
 			req.URL.Host = targetHost
 			req.Host = targetHost
 		},
-		// Use our custom transport that handles the mTLS handshake.
+		// Transport is the http.RoundTripper that executes the request. We use
+		// our custom ECP transport to handle the mTLS handshake.
 		Transport: transport,
-		// Define a custom error handler to maintain our JSON error format.
+		// ErrorHandler provides a custom function to handle errors that occur
+		// during the proxying process, ensuring a consistent error format.
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 			log.Printf("Proxy error: %v", err)
 			writeError(w, err, "Failed to forward request", http.StatusBadGateway)
@@ -162,41 +196,46 @@ func newProxyHandler(transport http.RoundTripper) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		targetHost := r.Header.Get(targetHostHeader)
 		if targetHost == "" {
-			writeError(w, fmt.Errorf("missing %s header", targetHostHeader), "Proxy error", http.StatusBadRequest)
+			writeError(w, fmt.Errorf("missing %s header", targetHostHeader), "Bad Request", http.StatusBadRequest)
 			return
 		}
 
-		if !isAllowedHost(targetHost) {
-			writeError(w, fmt.Errorf("target host %q is not allowed", targetHost), "Proxy error", http.StatusForbidden)
+		if !isAllowedHost(proxyConfig.AllowedHostsRegex, targetHost) {
+			writeError(w, fmt.Errorf("target host %q is not allowed", targetHost), "Forbidden", http.StatusForbidden)
 			return
 		}
 
-		// If validation passes, let the ReverseProxy do the work.
+		// If validation passes, let the ReverseProxy handle the request.
 		proxy.ServeHTTP(w, r)
 	})
 }
 
-func runServer(ctx context.Context, config *ProxyConfig, handler http.Handler) error {
+// runServer starts the HTTP server with the given handler and configuration.
+// It listens for OS signals from the provided context to perform a graceful shutdown.
+func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handler) error {
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", config.Port),
+		Addr:    fmt.Sprintf(":%d", proxyConfig.Port),
 		Handler: handler,
 	}
 
+	// Channel to receive errors from the server's ListenAndServe goroutine.
 	errChan := make(chan error, 1)
 
+	// Run the server in a goroutine.
 	go func() {
-		log.Printf("Starting proxy server on port %d", config.Port)
+		log.Printf("Starting proxy server on port %d", proxyConfig.Port)
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			errChan <- fmt.Errorf("failed to start proxy server: %w", err)
 		}
 	}()
 
+	// Block until we receive an error or a shutdown signal from the context.
 	select {
 	case err := <-errChan:
 		return err
 	case <-ctx.Done():
 		log.Println("Shutdown signal received, shutting down server gracefully...")
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), config.ShutdownTimeout)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), proxyConfig.ShutdownTimeout)
 		defer cancel()
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			return fmt.Errorf("server shutdown failed: %w", err)
@@ -207,34 +246,63 @@ func runServer(ctx context.Context, config *ProxyConfig, handler http.Handler) e
 	return nil
 }
 
-func run(ctx context.Context) error {
+// run is the main application logic. It initializes the configuration, ECP client,
+// HTTP transport, and proxy handler, then starts the server.
+func run(ctx context.Context, cfg *AppConfig) error {
 	log.Print("Starting ECP Proxy...")
-	config, err := newProxyConfigFromFlags()
-	if err != nil {
-		return fmt.Errorf("invalid configuration: %w", err)
-	}
 
+	proxyConfig := newDefaultProxyConfig()
+	proxyConfig.AllowedHostsRegex = mtlsGoogleapisHostRegex
+	proxyConfig.Port = cfg.Port
+
+	// Create tlsConfig
 	log.Println("Loading ECP credential...")
-	key, err := client.Cred(config.EnterpriseCertificateFilePath)
+	key, err := client.Cred(cfg.EnterpriseCertificateFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to get ECP credential: %w", err)
 	}
 	defer key.Close()
 
-	transport, err := newECPTransport(config, key)
-	if err != nil {
-		return fmt.Errorf("failed to create ECP transport: %w", err)
+	// The tls.Certificate is configured with the certificate chain and a custom
+	// crypto.Signer (the ECP client.Key) for the private key operations.
+	proxyConfig.TlsConfig = &tls.Config{
+		Certificates: []tls.Certificate{
+			{
+				Certificate: key.CertificateChain(),
+				PrivateKey:  key,
+			},
+		},
 	}
-	proxyHandler := newProxyHandler(transport)
 
-	return runServer(ctx, config, proxyHandler)
+	if cfg.GcloudConfiguredProxyURL != "" {
+		proxyURL, err := url.Parse(cfg.GcloudConfiguredProxyURL)
+		if err != nil {
+			return fmt.Errorf("failed to parse gcloud_configured_proxy_url: %w", err)
+		}
+		proxyConfig.ProxyURL = proxyURL
+	}
+
+	// Create Proxy Transport
+	ecpProxyTransport := newECPProxyTransport(proxyConfig)
+	// Create Proxy Handler
+	ecpProxyHandler := newECPProxyHandler(proxyConfig, ecpProxyTransport)
+	// Run the server
+	return runServer(ctx, proxyConfig, ecpProxyHandler)
 }
 
+// main is the entry point of the application. It parses flags, sets up a context
+// that listens for interrupt signals (SIGINT, SIGTERM) to enable graceful
+// shutdown, and then calls the main run function.
 func main() {
+	cfg, err := newAppConfigFromFlags()
+	if err != nil {
+		log.Fatalf("ECP Proxy initialization failed due to invalid configuration: %v", err)
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	if err := run(ctx); err != nil {
+	if err := run(ctx, cfg); err != nil {
 		log.Fatalf("ECP Proxy failed: %v", err)
 	}
 }
