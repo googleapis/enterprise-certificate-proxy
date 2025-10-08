@@ -25,6 +25,12 @@ mkdir -p ./build/bin/linux_amd64
 go build -buildmode=c-shared -ldflags="-X=main.Version=$CURRENT_TAG" -o build/bin/linux_amd64/libecp.so cshared/main.go
 rm build/bin/linux_amd64/libecp.h
 
+# Build the ECP HTTP Proxy binary
+pushd http_proxy
+go build
+mv http_proxy ../build/bin/linux_amd64/ecp_http_proxy
+popd
+
 # Build the signer binary
 cd ./internal/signer/linux
 go build

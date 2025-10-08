@@ -27,6 +27,12 @@ go build
 mv darwin ./../../../build/bin/darwin_amd64/ecp
 cd ./../../..
 
+# Build the ECP HTTP Proxy binary
+pushd http_proxy
+go build
+mv http_proxy ../build/bin/darwin_amd64/ecp_http_proxy
+popd
+
 # Build the signer library
 go build -buildmode=c-shared -buildmode=c-shared -ldflags="-X=main.Version=$CURRENT_TAG" -o build/bin/darwin_amd64/libecp.dylib cshared/main.go
 rm build/bin/darwin_amd64/libecp.h

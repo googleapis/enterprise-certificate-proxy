@@ -26,6 +26,12 @@ go build
 Move-Item .\windows.exe ..\..\..\build\bin\windows_amd64\ecp.exe
 Set-Location ..\..\..\
 
+# Build the ECP HTTP Proxy binary
+Set-Location .\http_proxy
+go build
+Move-Item .\http_proxy.exe ..\build\bin\windows_amd64\ecp_http_proxy.exe
+Set-Location ..\
+
 # Build the signer library
 # TODO: Add build version to shared DLL. https://github.com/googleapis/enterprise-certificate-proxy/issues/103
 go build -buildmode=c-shared -o .\build\bin\windows_amd64\libecp.dll .\cshared\main.go
