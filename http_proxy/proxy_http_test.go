@@ -299,7 +299,7 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Failed to parse passthrough proxy URL: %v", err)
 				}
-				proxyConfig.ProxyURL = passthroughProxyServerURL
+				proxyConfig.UpstreamProxyURL = passthroughProxyServerURL
 			}
 
 			transport := newECPProxyTransport(proxyConfig)
@@ -317,7 +317,7 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 				t.Fatalf("failed to create request: %v", err)
 			}
 
-			req.Header.Set("X-Goog-EcpProxy-Target-Host", tc.targetHostHeader)
+			req.Header.Set("x-goog-ecpproxy-target-host", tc.targetHostHeader)
 
 			client := &http.Client{}
 			resp, err := client.Do(req)

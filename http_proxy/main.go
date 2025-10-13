@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package main implements a local forwarding proxy (LocalECPProxy) that uses
+// Package main implements a local forwarding proxy (ECPProxy) that uses
 // an Enterprise Certificate Proxy (ECP) client to handle mTLS handshakes.
-// The proxy listens for HTTP requests, validates them, and forwards them to
+// ECPProxy listens for HTTP requests, validates them, and forwards them to
 // a target host specified in a custom HTTP header. It is designed to run
 // locally and can be configured via command-line flags.
 package main
@@ -41,11 +41,11 @@ import (
 
 const (
 	// targetHostHeader is the custom HTTP header used by clients to specify the
-	// destination host for the proxy to forward the request to.
-	targetHostHeader = "X-Goog-EcpProxy-Target-Host"
+	// destination host for the ECPPProxy to forward the request to.
+	targetHostHeader = "x-goog-ecpproxy-target-host"
 	// ecpInternalErrorHeader is a custom HTTP header added to error responses
-	// to indicate that the error originated within the LocalECPProxy.
-	ecpInternalErrorHeader = "X-Goog-EcpProxy-Error"
+	// to indicate that the error originated within the ECPProxy.
+	ecpInternalErrorHeader = "x-goog-ecpproxy-error"
 )
 
 // Default timeouts and configurations for the HTTP client and server.
@@ -60,7 +60,7 @@ const (
 
 // mtlsGoogleapisHostRegex is a regular expression that validates whether a target
 // host conforms to the "*.mtls.googleapis.com" pattern. This is a security
-// measure to ensure the proxy only connects to allowed endpoints.
+// measure to ensure the ECPProxy only connects to allowed endpoints.
 var mtlsGoogleapisHostRegex = regexp.MustCompile(`^[a-z0-9-]+\.mtls\.googleapis\.com$`)
 
 // AppConfig holds the application configuration parsed from command-line flags.
@@ -85,7 +85,7 @@ func newAppConfigFromFlags() (*AppConfig, error) {
 	cfg := &AppConfig{}
 	flag.IntVar(&cfg.Port, "port", 0, "The port to listen on for HTTP requests. (Required)")
 	flag.StringVar(&cfg.EnterpriseCertificateFilePath, "enterprise_certificate_file_path", "", "The path to the enterprise certificate file. (Required)")
-	flag.StringVar(&cfg.GcloudConfiguredProxyURL, "gcloud_configured_proxy_url", "", "The URL that gcloud is configured to use for the proxy.")
+	flag.StringVar(&cfg.GcloudConfiguredProxyURL, "gcloud_configured_proxy_url", "", "The upstream proxy URL configured through gcloud.")
 	flag.Parse()
 
 	if err := cfg.validate(); err != nil {
@@ -95,18 +95,18 @@ func newAppConfigFromFlags() (*AppConfig, error) {
 	return cfg, nil
 }
 
-// ProxyConfig holds the configuration for the proxy server.
+// ProxyConfig holds the configuration for the ECPPProxy server.
 type ProxyConfig struct {
-	Port                int // The port for the proxy server to listen on.
-	AllowedHostsRegex   *regexp.Regexp
-	TlsConfig           *tls.Config
-	ProxyURL            *url.URL
-	TLSHandshakeTimeout time.Duration // Max duration for TLS handshake to the target.
-	ProxyRequestTimeout time.Duration // Max duration for the entire proxy request.
-	DialTimeout         time.Duration // Max duration for establishing a TCP connection.
-	KeepAlivePeriod     time.Duration // Period for TCP keep-alives.
-	IdleConnTimeout     time.Duration // Max duration an idle connection is kept alive.
-	ShutdownTimeout     time.Duration // Max duration to wait for graceful shutdown.
+	Port                int            // The port for the ECPPProxy server to listen on.
+	AllowedHostsRegex   *regexp.Regexp // Regex to validate allowed target hosts.
+	TlsConfig           *tls.Config    // TLS configuration for mTLS.
+	UpstreamProxyURL    *url.URL       // Optional upstream proxy URL. This will configure the ECPPProxy transport to use this proxy.
+	TLSHandshakeTimeout time.Duration  // Max duration for TLS handshake to the target.
+	ProxyRequestTimeout time.Duration  // Max duration for the entire proxy request.
+	DialTimeout         time.Duration  // Max duration for establishing a TCP connection.
+	KeepAlivePeriod     time.Duration  // Period for TCP keep-alives.
+	IdleConnTimeout     time.Duration  // Max duration an idle connection is kept alive.
+	ShutdownTimeout     time.Duration  // Max duration to wait for graceful shutdown.
 }
 
 // newDefaultProxyConfig creates a new ProxyConfig with default values for timeouts.
@@ -169,9 +169,9 @@ func newECPProxyTransport(proxyConfig *ProxyConfig) http.RoundTripper {
 	}
 
 	// If an upstream proxy is configured, set it on the transport.
-	if proxyConfig.ProxyURL != nil {
-		transport.Proxy = http.ProxyURL(proxyConfig.ProxyURL)
-		log.Printf("Using gcloud-configured proxy URL: %s", proxyConfig.ProxyURL)
+	if proxyConfig.UpstreamProxyURL != nil {
+		transport.Proxy = http.ProxyURL(proxyConfig.UpstreamProxyURL)
+		log.Printf("Using upstream proxy URL: %s", proxyConfig.UpstreamProxyURL)
 	}
 	return transport
 }
@@ -186,8 +186,11 @@ func newECPProxyHandler(proxyConfig *ProxyConfig, transport http.RoundTripper) h
 		// It reads the target host from our custom header, sets the request URL,
 		// and removes the custom header to avoid leaking it.
 		Director: func(req *http.Request) {
+			// ECPProxy uses a custom HTTP header (x-goog-ecpproxy-target-host)
+			// to determine the destination for each request.
+			// This header is stripped from the outgoing request to maintain transparency.
 			targetHost := req.Header.Get(targetHostHeader)
-			// We clear the header so it's not sent to the destination.
+			// We clear the internal targetHostHeader so it's not sent to the destination.
 			req.Header.Del(targetHostHeader)
 
 			// Set the URL and Host for the outgoing request.
@@ -288,12 +291,15 @@ func run(ctx context.Context, cfg *AppConfig) error {
 		},
 	}
 
+	// ECPPProxy supports an optional intermediate upstream proxy through the -gcloud_configured_proxy_url command-line flag.
+	// The configured upstream proxy URL is parsed and set in the ProxyConfig.
+	// If set, the ECPPProxy transport will use this URL for forwarding requests through an intermediate proxy.
 	if cfg.GcloudConfiguredProxyURL != "" {
 		proxyURL, err := url.Parse(cfg.GcloudConfiguredProxyURL)
 		if err != nil {
 			return fmt.Errorf("failed to parse gcloud_configured_proxy_url: %w", err)
 		}
-		proxyConfig.ProxyURL = proxyURL
+		proxyConfig.UpstreamProxyURL = proxyURL
 	}
 
 	// Create Proxy Transport
