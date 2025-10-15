@@ -762,9 +762,13 @@ func ImportPKCS12Cred(credPath string, password string) error {
 	defer C.CFRelease(C.CFTypeRef(optionsDict))
 
 	// 3. Import the .p12 data with password
-	status := C.SecPKCS12Import(bytesToCFData(keyData), optionsDict, nil)
+	var items C.CFArrayRef
+	status := C.SecPKCS12Import(bytesToCFData(keyData), optionsDict, &items)
 	if status != C.errSecSuccess {
 		return fmt.Errorf("failed to import PKCS#12 data: %s", osStatusDescription(status))
+	}
+	if items != 0 {
+		defer C.CFRelease(C.CFTypeRef(items))
 	}
 
 	return nil
