@@ -59,23 +59,20 @@ const (
 )
 
 // mtlsGoogleapisHostRegex is a regular expression that validates whether a target
-// host conforms to the "*.mtls.googleapis.com" pattern. This is a security
+// host conforms to the "*.mtls.googleapis.com" and "*.mtls.sandbox.googleapis.com" pattern. This is a security
 // measure to ensure the ECPProxy only connects to allowed endpoints.
 var mtlsGoogleapisHostRegex = regexp.MustCompile(`^[a-z0-9-]+(\.mtls|\.mtls\.sandbox)\.googleapis\.com$`)
 
 // AppConfig holds the application configuration parsed from command-line flags.
 type AppConfig struct {
-	Port                          int
-	EnterpriseCertificateFilePath string
-	GcloudConfiguredProxyURL      string
+	Port                             int
+	EnterpriseCertificateFilePath    string
+	GcloudConfiguredUpstreamProxyURL string
 }
 
 func (cfg *AppConfig) validate() error {
 	if cfg.Port <= 0 {
 		return errors.New("port is required and must be a positive integer")
-	}
-	if cfg.EnterpriseCertificateFilePath == "" {
-		return errors.New("enterprise_certificate_file_path is required")
 	}
 	return nil
 }
@@ -84,8 +81,8 @@ func (cfg *AppConfig) validate() error {
 func newAppConfigFromFlags() (*AppConfig, error) {
 	cfg := &AppConfig{}
 	flag.IntVar(&cfg.Port, "port", 0, "The port to listen on for HTTP requests. (Required)")
-	flag.StringVar(&cfg.EnterpriseCertificateFilePath, "enterprise_certificate_file_path", "", "The path to the enterprise certificate file. (Required)")
-	flag.StringVar(&cfg.GcloudConfiguredProxyURL, "gcloud_configured_proxy_url", "", "The upstream proxy URL configured through gcloud.")
+	flag.StringVar(&cfg.EnterpriseCertificateFilePath, "enterprise_certificate_file_path", "", "The path to the enterprise certificate file.")
+	flag.StringVar(&cfg.GcloudConfiguredUpstreamProxyURL, "gcloud_configured_upstream_proxy_url", "", "The upstream proxy URL configured through gcloud.")
 	flag.Parse()
 
 	if err := cfg.validate(); err != nil {
@@ -291,13 +288,13 @@ func run(ctx context.Context, cfg *AppConfig) error {
 		},
 	}
 
-	// ECPPProxy supports an optional intermediate upstream proxy through the -gcloud_configured_proxy_url command-line flag.
+	// ECPPProxy supports an optional intermediate upstream proxy through the -gcloud_configured_upstream_proxy_url command-line flag.
 	// The configured upstream proxy URL is parsed and set in the ProxyConfig.
 	// If set, the ECPPProxy transport will use this URL for forwarding requests through an intermediate proxy.
-	if cfg.GcloudConfiguredProxyURL != "" {
-		proxyURL, err := url.Parse(cfg.GcloudConfiguredProxyURL)
+	if cfg.GcloudConfiguredUpstreamProxyURL != "" {
+		proxyURL, err := url.Parse(cfg.GcloudConfiguredUpstreamProxyURL)
 		if err != nil {
-			return fmt.Errorf("failed to parse gcloud_configured_proxy_url: %w", err)
+			return fmt.Errorf("failed to parse gcloud_configured_upstream_proxy_url: %w", err)
 		}
 		proxyConfig.UpstreamProxyURL = proxyURL
 	}

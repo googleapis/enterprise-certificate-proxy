@@ -47,8 +47,9 @@ func TestAppConfigFromFlags(t *testing.T) {
 		want    *AppConfig
 	}{
 		{
-			name: "Happy Path",
-			args: []string{"-port", "8080", "-enterprise_certificate_file_path", "/path/to/cert.json"},
+			name:    "Happy Path",
+			args:    []string{"-port", "8080", "-enterprise_certificate_file_path", "/path/to/cert.json"},
+			wantErr: false,
 			want: &AppConfig{
 				Port:                          8080,
 				EnterpriseCertificateFilePath: "/path/to/cert.json",
@@ -72,15 +73,27 @@ func TestAppConfigFromFlags(t *testing.T) {
 		{
 			name:    "Missing Certificate Path",
 			args:    []string{"-port", "8080"},
-			wantErr: true,
+			wantErr: false,
+			want: &AppConfig{
+				Port: 8080,
+			},
 		},
 		{
-			name: "Happy Path with Optional Proxy URL",
-			args: []string{"-port", "8080", "-enterprise_certificate_file_path", "/path/to/cert.json", "-gcloud_configured_proxy_url", "http://proxy.example.com"},
+			name:    "Empty Certificate Path",
+			args:    []string{"-port", "8080", "-enterprise_certificate_file_path", ""},
+			wantErr: false,
 			want: &AppConfig{
-				Port:                          8080,
-				EnterpriseCertificateFilePath: "/path/to/cert.json",
-				GcloudConfiguredProxyURL:      "http://proxy.example.com",
+				Port: 8080,
+			},
+		},
+		{
+			name:    "Happy Path with Optional Proxy URL",
+			args:    []string{"-port", "8080", "-enterprise_certificate_file_path", "/path/to/cert.json", "-gcloud_configured_upstream_proxy_url", "http://proxy.example.com"},
+			wantErr: false,
+			want: &AppConfig{
+				Port:                             8080,
+				EnterpriseCertificateFilePath:    "/path/to/cert.json",
+				GcloudConfiguredUpstreamProxyURL: "http://proxy.example.com",
 			},
 		},
 	}
@@ -116,8 +129,8 @@ func TestAppConfigFromFlags(t *testing.T) {
 				if got.EnterpriseCertificateFilePath != tt.want.EnterpriseCertificateFilePath {
 					t.Errorf("newProxyConfigFromFlags() EnterpriseCertificateFilePath = %v, want %v", got.EnterpriseCertificateFilePath, tt.want.EnterpriseCertificateFilePath)
 				}
-				if got.GcloudConfiguredProxyURL != tt.want.GcloudConfiguredProxyURL {
-					t.Errorf("newProxyConfigFromFlags() GcloudConfiguredProxyURL = %v, want %v", got.GcloudConfiguredProxyURL, tt.want.GcloudConfiguredProxyURL)
+				if got.GcloudConfiguredUpstreamProxyURL != tt.want.GcloudConfiguredUpstreamProxyURL {
+					t.Errorf("newProxyConfigFromFlags() GcloudConfiguredUpstreamProxyURL = %v, want %v", got.GcloudConfiguredUpstreamProxyURL, tt.want.GcloudConfiguredUpstreamProxyURL)
 				}
 			}
 		})
