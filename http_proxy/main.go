@@ -61,7 +61,7 @@ const (
 // mtlsGoogleapisHostRegex is a regular expression that validates whether a target
 // host conforms to the "*.mtls.googleapis.com" pattern. This is a security
 // measure to ensure the ECPProxy only connects to allowed endpoints.
-var mtlsGoogleapisHostRegex = regexp.MustCompile(`^[a-z0-9-]+\.mtls\.googleapis\.com$`)
+var mtlsGoogleapisHostRegex = regexp.MustCompile(`^[a-z0-9-]+(\.mtls|\.mtls\.sandbox)\.googleapis\.com$`)
 
 // AppConfig holds the application configuration parsed from command-line flags.
 type AppConfig struct {

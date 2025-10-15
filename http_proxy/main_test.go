@@ -132,9 +132,15 @@ func TestIsAllowedHost(t *testing.T) {
 		want                bool
 	}{
 		{
-			name:                "allowed host",
+			name:                "allowed host storage.mtls.googleapis.com",
 			isAllowedHostsRegex: mtlsGoogleapisHostRegex,
 			host:                "storage.mtls.googleapis.com",
+			want:                true,
+		},
+		{
+			name:                "allowed host storage.mtls.sandbox.googleapis.com",
+			isAllowedHostsRegex: mtlsGoogleapisHostRegex,
+			host:                "storage.mtls.sandbox.googleapis.com",
 			want:                true,
 		},
 		{
@@ -144,27 +150,57 @@ func TestIsAllowedHost(t *testing.T) {
 			want:                true,
 		},
 		{
-			name:                "use a disallowed host, google.com",
+			name:                "disallowed host google.com rejected",
 			isAllowedHostsRegex: mtlsGoogleapisHostRegex,
 			host:                "google.com",
 			want:                false,
 		},
 		{
-			name:                "disallowed host - evil.com",
+			name:                "disallowed host evil.com rejected",
 			isAllowedHostsRegex: mtlsGoogleapisHostRegex,
 			host:                "evil.com",
 			want:                false,
 		},
 		{
-			name:                "disallowed host - fake subdomain",
+			name:                "disallowed host with fake subdomain rejected",
 			isAllowedHostsRegex: mtlsGoogleapisHostRegex,
 			host:                "storage.mtls.googleapis.com.fake.com",
 			want:                false,
 		},
 		{
-			name:                "disallowed host - fake prefix",
+			name:                "disallowed host with fake prefix rejected",
 			isAllowedHostsRegex: mtlsGoogleapisHostRegex,
 			host:                "a/b/c/storage.mtls.googleapis.com.",
+			want:                false,
+		},
+		{
+			name:                "allowed host with numbers",
+			isAllowedHostsRegex: mtlsGoogleapisHostRegex,
+			host:                "my-service-123.mtls.sandbox.googleapis.com",
+			want:                true,
+		},
+		{
+			name:                "disallowed host sandbox.google.com rejected",
+			isAllowedHostsRegex: mtlsGoogleapisHostRegex,
+			host:                "sandbox.google.com",
+			want:                false,
+		},
+		{
+			name:                "disallowed host sandbox.evil.com rejected",
+			isAllowedHostsRegex: mtlsGoogleapisHostRegex,
+			host:                "sandbox.evil.com",
+			want:                false,
+		},
+		{
+			name:                "disallowed host with fake subdomain rejected",
+			isAllowedHostsRegex: mtlsGoogleapisHostRegex,
+			host:                "storage.mtls.sandbox.googleapis.com.fake.com",
+			want:                false,
+		},
+		{
+			name:                "disallowed host with fake prefix rejected",
+			isAllowedHostsRegex: mtlsGoogleapisHostRegex,
+			host:                "a/b/c/storage.mtls.sandbox.googleapis.com.",
 			want:                false,
 		},
 		{
