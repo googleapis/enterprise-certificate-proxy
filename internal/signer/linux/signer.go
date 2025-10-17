@@ -33,15 +33,32 @@ import (
 	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/util"
 )
 
+
 // If ECP Logging is enabled return true
 // Otherwise return false
-func enableECPLogging() bool {
+func enabledECPLogging() bool {
 	if os.Getenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS") != "" {
 		return true
 	}
-
-	log.SetOutput(io.Discard)
 	return false
+}
+
+func ecpLogf(format string, v ...any) {
+	if enabledECPLogging() {
+		log.Printf(format, v...)
+	}
+}
+
+func ecpFatalln(v any) {
+	if enabledECPLogging() {
+		log.Fatalln(v)
+	}
+}
+
+func ecpFatalf(format string, v any) {
+	if enabledECPLogging() {
+		log.Fatalf(format, v)
+	}
 }
 
 func init() {
@@ -123,24 +140,23 @@ func (k *EnterpriseCertSigner) Decrypt(args DecryptArgs, resp *[]byte) (err erro
 }
 
 func main() {
-	enableECPLogging()
 	if len(os.Args) != 2 {
-		log.Fatalln("Signer is not meant to be invoked manually, exiting...")
+		ecpFatalln("Signer is not meant to be invoked manually, exiting...")
 	}
 	configFilePath := os.Args[1]
 	config, err := util.LoadConfig(configFilePath)
 	if err != nil {
-		log.Fatalf("Failed to load enterprise cert config: %v", err)
+		ecpFatalf("Failed to load enterprise cert config: %v", err)
 	}
 
 	enterpriseCertSigner := new(EnterpriseCertSigner)
 	enterpriseCertSigner.key, err = pkcs11.Cred(config.CertConfigs.PKCS11.PKCS11Module, config.CertConfigs.PKCS11.Slot, config.CertConfigs.PKCS11.Label, config.CertConfigs.PKCS11.UserPin)
 	if err != nil {
-		log.Fatalf("Failed to initialize enterprise cert signer using pkcs11: %v", err)
+		ecpFatalf("Failed to initialize enterprise cert signer using pkcs11: %v", err)
 	}
 
 	if err := rpc.Register(enterpriseCertSigner); err != nil {
-		log.Fatalf("Failed to register enterprise cert signer with net/rpc: %v", err)
+		ecpFatalf("Failed to register enterprise cert signer with net/rpc: %v", err)
 	}
 
 	// If the parent process dies, we should exit.
@@ -149,7 +165,7 @@ func main() {
 	go func() {
 		for {
 			if os.Getppid() == 1 {
-				log.Fatalln("Enterprise cert signer's parent process died, exiting...")
+				ecpFatalln("Enterprise cert signer's parent process died, exiting...")
 			}
 			time.Sleep(time.Second)
 		}

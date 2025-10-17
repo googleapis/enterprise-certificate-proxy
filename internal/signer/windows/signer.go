@@ -33,13 +33,29 @@ import (
 
 // If ECP Logging is enabled return true
 // Otherwise return false
-func enableECPLogging() bool {
+func enabledECPLogging() bool {
 	if os.Getenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS") != "" {
 		return true
 	}
-
-	log.SetOutput(io.Discard)
 	return false
+}
+
+func ecpLogf(format string, v ...any) {
+	if enabledECPLogging() {
+		log.Printf(format, v...)
+	}
+}
+
+func ecpFatalln(v any) {
+	if enabledECPLogging() {
+		log.Fatalln(v)
+	}
+}
+
+func ecpFatalf(format string, v any) {
+	if enabledECPLogging() {
+		log.Fatalf(format, v)
+	}
 }
 
 func init() {
@@ -96,24 +112,23 @@ func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
 }
 
 func main() {
-	enableECPLogging()
 	if len(os.Args) != 2 {
-		log.Fatalln("Signer is not meant to be invoked manually, exiting...")
+		ecpFatalln("Signer is not meant to be invoked manually, exiting...")
 	}
 	configFilePath := os.Args[1]
 	config, err := util.LoadConfig(configFilePath)
 	if err != nil {
-		log.Fatalf("Failed to load enterprise cert config: %v", err)
+		ecpFatalf("Failed to load enterprise cert config: %v", err)
 	}
 
 	enterpriseCertSigner := new(EnterpriseCertSigner)
 	enterpriseCertSigner.key, err = ncrypt.Cred(config.CertConfigs.WindowsStore.Issuer, config.CertConfigs.WindowsStore.Store, config.CertConfigs.WindowsStore.Provider)
 	if err != nil {
-		log.Fatalf("Failed to initialize enterprise cert signer using ncrypt: %v", err)
+		ecpFatalf("Failed to initialize enterprise cert signer using ncrypt: %v", err)
 	}
 
 	if err := rpc.Register(enterpriseCertSigner); err != nil {
-		log.Fatalf("Failed to register enterprise cert signer with net/rpc: %v", err)
+		ecpFatalf("Failed to register enterprise cert signer with net/rpc: %v", err)
 	}
 
 	rpc.ServeConn(&Connection{os.Stdin, os.Stdout})
