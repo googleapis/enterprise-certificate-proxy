@@ -47,53 +47,61 @@ func TestAppConfigFromFlags(t *testing.T) {
 		want    *AppConfig
 	}{
 		{
-			name:    "Happy Path",
+			name:    "Missing Nonce",
 			args:    []string{"-port", "8080", "-enterprise_certificate_file_path", "/path/to/cert.json"},
-			wantErr: false,
-			want: &AppConfig{
-				Port:                          8080,
-				EnterpriseCertificateFilePath: "/path/to/cert.json",
-			},
+			wantErr: true,
 		},
 		{
 			name:    "Missing Port",
-			args:    []string{"-enterprise_certificate_file_path", "/path/to/cert.json"},
+			args:    []string{"-enterprise_certificate_file_path", "/path/to/cert.json", "-nonce_token", "abc"},
 			wantErr: true,
 		},
 		{
 			name:    "Invalid Port (zero)",
-			args:    []string{"-port", "0", "-enterprise_certificate_file_path", "/path/to/cert.json"},
+			args:    []string{"-port", "0", "-enterprise_certificate_file_path", "/path/to/cert.json", "-nonce_token", "abc"},
 			wantErr: true,
 		},
 		{
 			name:    "Invalid Port (negative)",
-			args:    []string{"-port", "-1", "-enterprise_certificate_file_path", "/path/to/cert.json"},
+			args:    []string{"-port", "-1", "-enterprise_certificate_file_path", "/path/to/cert.json", "-nonce_token", "abc"},
 			wantErr: true,
 		},
 		{
 			name:    "Missing Certificate Path",
-			args:    []string{"-port", "8080"},
+			args:    []string{"-port", "8080", "-nonce_token", "abc"},
 			wantErr: false,
 			want: &AppConfig{
-				Port: 8080,
+				Port:       8080,
+				NonceToken: "abc",
 			},
 		},
 		{
 			name:    "Empty Certificate Path",
-			args:    []string{"-port", "8080", "-enterprise_certificate_file_path", ""},
+			args:    []string{"-port", "8080", "-enterprise_certificate_file_path", "", "-nonce_token", "abc"},
 			wantErr: false,
 			want: &AppConfig{
-				Port: 8080,
+				Port:       8080,
+				NonceToken: "abc",
 			},
 		},
 		{
 			name:    "Happy Path with Optional Proxy URL",
-			args:    []string{"-port", "8080", "-enterprise_certificate_file_path", "/path/to/cert.json", "-gcloud_configured_upstream_proxy_url", "http://proxy.example.com"},
+			args:    []string{"-port", "8080", "-enterprise_certificate_file_path", "/path/to/cert.json", "-gcloud_configured_upstream_proxy_url", "http://proxy.example.com", "-nonce_token", "abc"},
 			wantErr: false,
 			want: &AppConfig{
 				Port:                             8080,
 				EnterpriseCertificateFilePath:    "/path/to/cert.json",
 				GcloudConfiguredUpstreamProxyURL: "http://proxy.example.com",
+				NonceToken:                       "abc",
+			},
+		},
+		{
+			name:    "Happy Path with Nonce Token",
+			args:    []string{"-port", "8080", "-nonce_token", "my-secret-token"},
+			wantErr: false,
+			want: &AppConfig{
+				Port:       8080,
+				NonceToken: "my-secret-token",
 			},
 		},
 	}
@@ -103,7 +111,7 @@ func TestAppConfigFromFlags(t *testing.T) {
 			// Each test needs its own flag set.
 			fs := flag.NewFlagSet(tt.name, flag.ContinueOnError)
 			// Discard output to avoid polluting test logs.
-			fs.SetOutput(os.Stderr)
+			fs.SetOutput(io.Discard)
 
 			// Temporarily replace the default command-line flags with our test set.
 			originalCommandLine := flag.CommandLine
@@ -131,6 +139,9 @@ func TestAppConfigFromFlags(t *testing.T) {
 				}
 				if got.GcloudConfiguredUpstreamProxyURL != tt.want.GcloudConfiguredUpstreamProxyURL {
 					t.Errorf("newProxyConfigFromFlags() GcloudConfiguredUpstreamProxyURL = %v, want %v", got.GcloudConfiguredUpstreamProxyURL, tt.want.GcloudConfiguredUpstreamProxyURL)
+				}
+				if got.NonceToken != tt.want.NonceToken {
+					t.Errorf("newProxyConfigFromFlags() NonceToken = %v, want %v", got.NonceToken, tt.want.NonceToken)
 				}
 			}
 		})
@@ -507,4 +518,67 @@ func TestNewECPProxyHandler_ErrorHandlerInvocation(t *testing.T) {
 	if errResp.Error == "" {
 		t.Errorf("Expected error response 'Error' field to be non-empty")
 	}
+}
+
+func TestReadyzHandler(t *testing.T) {
+	nonceToken := "test-nonce-token"
+	handler := newReadyzHandler(nonceToken)
+
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	expected := nonceToken
+	if rr.Body.String() != expected {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
+	}
+}
+
+func TestMuxRouting(t *testing.T) {
+	nonceToken := "test-nonce"
+	proxyConfig := NewProxyConfigForTest()
+	mockRT := &mockRoundTripper{}
+
+	// Create a ServeMux and register handlers
+	mux := http.NewServeMux()
+	mux.Handle("/readyz", newReadyzHandler(nonceToken))
+	mux.Handle("/", newECPProxyHandler(proxyConfig, mockRT))
+
+	t.Run("Test /readyz endpoint", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("Expected status code %d for /readyz, got %d", http.StatusOK, rr.Code)
+		}
+		if rr.Body.String() != nonceToken {
+			t.Errorf("Expected body %q for /readyz, got %q", nonceToken, rr.Body.String())
+		}
+	})
+
+	// Request to another path (should go to proxy)
+	t.Run("Test /some/path endpoint", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/some/path", nil)
+		req.Header.Set(targetHostHeader, "storage.mtls.googleapis.com")
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("Expected status code %d for proxy, got %d", http.StatusOK, rr.Code)
+		}
+		if mockRT.capturedRequest == nil {
+			t.Fatal("Proxy handler was not called")
+		}
+		if mockRT.capturedRequest.URL.Path != "/some/path" {
+			t.Errorf("Expected path %q, got %q", "/some/path", mockRT.capturedRequest.URL.Path)
+		}
+	})
 }

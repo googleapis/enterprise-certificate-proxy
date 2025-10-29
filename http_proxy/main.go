@@ -68,11 +68,15 @@ type AppConfig struct {
 	Port                             int
 	EnterpriseCertificateFilePath    string
 	GcloudConfiguredUpstreamProxyURL string
+	NonceToken                       string
 }
 
 func (cfg *AppConfig) validate() error {
 	if cfg.Port <= 0 {
 		return errors.New("port is required and must be a positive integer")
+	}
+	if cfg.NonceToken == "" {
+		return errors.New("nonce_token is required")
 	}
 	return nil
 }
@@ -83,6 +87,7 @@ func newAppConfigFromFlags() (*AppConfig, error) {
 	flag.IntVar(&cfg.Port, "port", 0, "The port to listen on for HTTP requests. (Required)")
 	flag.StringVar(&cfg.EnterpriseCertificateFilePath, "enterprise_certificate_file_path", "", "The path to the enterprise certificate file.")
 	flag.StringVar(&cfg.GcloudConfiguredUpstreamProxyURL, "gcloud_configured_upstream_proxy_url", "", "The upstream proxy URL configured through gcloud.")
+	flag.StringVar(&cfg.NonceToken, "nonce_token", "", "The nonce token is returned in /readyz endpoint, and can be used to authenticate this server. (Required)")
 	flag.Parse()
 
 	if err := cfg.validate(); err != nil {
@@ -224,6 +229,18 @@ func newECPProxyHandler(proxyConfig *ProxyConfig, transport http.RoundTripper) h
 	})
 }
 
+// newReadyzHandler creates an http.Handler for the /readyz endpoint.
+// It writes the nonce token to the response body.
+func newReadyzHandler(nonceToken string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write([]byte(nonceToken)); err != nil {
+			log.Printf("Failed to write readyz response: %v", err)
+		}
+	})
+}
+
 // runServer starts the HTTP server with the given handler and configuration.
 // It listens for OS signals from the provided context to perform a graceful shutdown.
 func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handler) error {
@@ -301,10 +318,18 @@ func run(ctx context.Context, cfg *AppConfig) error {
 
 	// Create Proxy Transport
 	ecpProxyTransport := newECPProxyTransport(proxyConfig)
-	// Create Proxy Handler
-	ecpProxyHandler := newECPProxyHandler(proxyConfig, ecpProxyTransport)
+
+	// Create a ServeMux to route requests.
+	mux := http.NewServeMux()
+
+	// The /readyz endpoint returns the nonce token for authentication.
+	mux.Handle("/readyz", newReadyzHandler(cfg.NonceToken))
+
+	// The main ecp proxy handler handles all other requests.
+	mux.Handle("/", newECPProxyHandler(proxyConfig, ecpProxyTransport))
+
 	// Run the server
-	return runServer(ctx, proxyConfig, ecpProxyHandler)
+	return runServer(ctx, proxyConfig, mux)
 }
 
 // main is the entry point of the application. It parses flags, sets up a context
