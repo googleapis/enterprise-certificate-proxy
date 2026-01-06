@@ -30,7 +30,7 @@ import (
 
 	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/linux/pkcs11"
 	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/util"
-    "github.com/googleapis/enterprise-certificate-proxy/utils"
+	"github.com/googleapis/enterprise-certificate-proxy/utils"
 )
 
 func init() {
