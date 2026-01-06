@@ -36,7 +36,7 @@ import (
 	"time"
 
 	"github.com/googleapis/enterprise-certificate-proxy/client"
-        "github.com/googleapis/enterprise-certificate-proxy/utils"
+    "github.com/googleapis/enterprise-certificate-proxy/utils"
 )
 
 const (
