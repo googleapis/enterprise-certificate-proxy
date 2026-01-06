@@ -29,7 +29,7 @@ import (
 
 	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/darwin/keychain"
 	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/util"
-        "github.com/googleapis/enterprise-certificate-proxy/utils"
+    "github.com/googleapis/enterprise-certificate-proxy/utils"
 )
 
 func init() {
