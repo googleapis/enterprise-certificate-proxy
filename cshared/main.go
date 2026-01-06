@@ -34,7 +34,7 @@ import (
 	"unsafe"
 
 	"github.com/googleapis/enterprise-certificate-proxy/client"
-        "github.com/googleapis/enterprise-certificate-proxy/utils"
+    "github.com/googleapis/enterprise-certificate-proxy/utils"
 )
 
 // Version is generally set by the build command. Releases of ECP must have a specific version set.
