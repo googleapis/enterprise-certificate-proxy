@@ -23,24 +23,13 @@ import (
 	"crypto/x509"
 	"encoding/gob"
 	"io"
-	"log"
 	"net/rpc"
 	"os"
 
 	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/util"
 	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/windows/ncrypt"
+	"github.com/googleapis/enterprise-certificate-proxy/utils"
 )
-
-// If ECP Logging is enabled return true
-// Otherwise return false
-func enableECPLogging() bool {
-	if os.Getenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS") != "" {
-		return true
-	}
-
-	log.SetOutput(io.Discard)
-	return false
-}
 
 func init() {
 	gob.Register(crypto.SHA256)
@@ -96,24 +85,23 @@ func (k *EnterpriseCertSigner) Sign(args SignArgs, resp *[]byte) (err error) {
 }
 
 func main() {
-	enableECPLogging()
 	if len(os.Args) != 2 {
-		log.Fatalln("Signer is not meant to be invoked manually, exiting...")
+		utils.Fatalln("Signer is not meant to be invoked manually, exiting...")
 	}
 	configFilePath := os.Args[1]
 	config, err := util.LoadConfig(configFilePath)
 	if err != nil {
-		log.Fatalf("Failed to load enterprise cert config: %v", err)
+		utils.Fatalf("Failed to load enterprise cert config: %v", err)
 	}
 
 	enterpriseCertSigner := new(EnterpriseCertSigner)
 	enterpriseCertSigner.key, err = ncrypt.Cred(config.CertConfigs.WindowsStore.Issuer, config.CertConfigs.WindowsStore.Store, config.CertConfigs.WindowsStore.Provider)
 	if err != nil {
-		log.Fatalf("Failed to initialize enterprise cert signer using ncrypt: %v", err)
+		utils.Fatalf("Failed to initialize enterprise cert signer using ncrypt: %v", err)
 	}
 
 	if err := rpc.Register(enterpriseCertSigner); err != nil {
-		log.Fatalf("Failed to register enterprise cert signer with net/rpc: %v", err)
+		utils.Fatalf("Failed to register enterprise cert signer with net/rpc: %v", err)
 	}
 
 	rpc.ServeConn(&Connection{os.Stdin, os.Stdout})

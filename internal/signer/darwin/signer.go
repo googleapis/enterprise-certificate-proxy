@@ -23,25 +23,14 @@ import (
 	"crypto/x509"
 	"encoding/gob"
 	"io"
-	"log"
 	"net/rpc"
 	"os"
 	"time"
 
 	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/darwin/keychain"
 	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/util"
+	"github.com/googleapis/enterprise-certificate-proxy/utils"
 )
-
-// If ECP Logging is enabled return true
-// Otherwise return false
-func enableECPLogging() bool {
-	if os.Getenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS") != "" {
-		return true
-	}
-
-	log.SetOutput(io.Discard)
-	return false
-}
 
 func init() {
 	gob.Register(crypto.SHA256)
@@ -122,24 +111,23 @@ func (k *EnterpriseCertSigner) Decrypt(args DecryptArgs, resp *[]byte) (err erro
 }
 
 func main() {
-	enableECPLogging()
 	if len(os.Args) != 2 {
-		log.Fatalln("Signer is not meant to be invoked manually, exiting...")
+		utils.Fatalln("Signer is not meant to be invoked manually, exiting...")
 	}
 	configFilePath := os.Args[1]
 	config, err := util.LoadConfig(configFilePath)
 	if err != nil {
-		log.Fatalf("Failed to load enterprise cert config: %v", err)
+		utils.Fatalf("Failed to load enterprise cert config: %v", err)
 	}
 
 	enterpriseCertSigner := new(EnterpriseCertSigner)
 	enterpriseCertSigner.key, err = keychain.Cred(config.CertConfigs.MacOSKeychain.Issuer, config.CertConfigs.MacOSKeychain.KeychainType)
 	if err != nil {
-		log.Fatalf("Failed to initialize enterprise cert signer using keychain: %v", err)
+		utils.Fatalf("Failed to initialize enterprise cert signer using keychain: %v", err)
 	}
 
 	if err := rpc.Register(enterpriseCertSigner); err != nil {
-		log.Fatalf("Failed to register enterprise cert signer with net/rpc: %v", err)
+		utils.Fatalf("Failed to register enterprise cert signer with net/rpc: %v", err)
 	}
 
 	// If the parent process dies, we should exit.
@@ -148,7 +136,7 @@ func main() {
 	go func() {
 		for {
 			if os.Getppid() == 1 {
-				log.Fatalln("Enterprise cert signer's parent process died, exiting...")
+				utils.Fatalln("Enterprise cert signer's parent process died, exiting...")
 			}
 			time.Sleep(time.Second)
 		}
