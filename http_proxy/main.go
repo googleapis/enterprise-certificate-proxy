@@ -100,6 +100,7 @@ func newAppConfigFromFlags() (*AppConfig, error) {
 type ProxyConfig struct {
 	Port                int            // The port for the ECPPProxy server to listen on.
 	AllowedHostsRegex   *regexp.Regexp // Regex to validate allowed target hosts.
+	AllowedGoogleApisHosts []string       // Explicitly allowed Google API hosts.
 	TlsConfig           *tls.Config    // TLS configuration for mTLS.
 	UpstreamProxyURL    *url.URL       // Optional upstream proxy URL. This will configure the ECPPProxy transport to use this proxy.
 	TLSHandshakeTimeout time.Duration  // Max duration for TLS handshake to the target.
@@ -119,6 +120,9 @@ func newDefaultProxyConfig() *ProxyConfig {
 		KeepAlivePeriod:     defaultKeepAlivePeriod,
 		IdleConnTimeout:     defaultIdleConnTimeout,
 		ShutdownTimeout:     defaultShutdownTimeout,
+		AllowedGoogleApisHosts: []string{
+			"reauth.googleapis.com",
+		},
 	}
 }
 
@@ -150,9 +154,18 @@ func writeError(w http.ResponseWriter, originalError error, errorMsg string, sta
 }
 
 // isAllowedHost checks if the provided host string matches the predefined
-// regular expression for allowed hosts.
-func isAllowedHost(allowedHostsRegex *regexp.Regexp, host string) bool {
-	return allowedHostsRegex.MatchString(host)
+// regular expression for allowed hosts or is one of the explicilty allowed hosts
+func isAllowedHost(allowedHostsRegex *regexp.Regexp, allowedGoogleApisHosts []string, host string) bool {
+	if allowedHostsRegex.MatchString(host) {
+		return true
+	}
+
+	for _, allowedHost := range allowedGoogleApisHosts {
+		if host == allowedHost {
+			return true
+		}
+	}
+	return false
 }
 
 // newECPProxyTransport creates an http.RoundTripper (specifically, an http.Transport)
@@ -219,7 +232,7 @@ func newECPProxyHandler(proxyConfig *ProxyConfig, transport http.RoundTripper) h
 			return
 		}
 
-		if !isAllowedHost(proxyConfig.AllowedHostsRegex, targetHost) {
+		if !isAllowedHost(proxyConfig.AllowedHostsRegex, proxyConfig.AllowedGoogleApisHosts, targetHost) {
 			writeError(w, fmt.Errorf("target host %q is not allowed", targetHost), "Forbidden", http.StatusForbidden)
 			return
 		}
