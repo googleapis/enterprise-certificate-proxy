@@ -26,6 +26,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -36,7 +37,6 @@ import (
 	"time"
 
 	"github.com/googleapis/enterprise-certificate-proxy/client"
-    "github.com/googleapis/enterprise-certificate-proxy/utils"
 )
 
 const (
@@ -145,7 +145,7 @@ func writeError(w http.ResponseWriter, originalError error, errorMsg string, sta
 	}
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		utils.Debugf("Failed to write error response: %v", err)
+		log.Printf("Failed to write error response: %v", err)
 	}
 }
 
@@ -173,7 +173,7 @@ func newECPProxyTransport(proxyConfig *ProxyConfig) http.RoundTripper {
 	// If an upstream proxy is configured, set it on the transport.
 	if proxyConfig.UpstreamProxyURL != nil {
 		transport.Proxy = http.ProxyURL(proxyConfig.UpstreamProxyURL)
-		utils.Debugf("Using upstream proxy URL: %s", proxyConfig.UpstreamProxyURL)
+		log.Printf("Using upstream proxy URL: %s", proxyConfig.UpstreamProxyURL)
 	}
 	return transport
 }
@@ -206,7 +206,7 @@ func newECPProxyHandler(proxyConfig *ProxyConfig, transport http.RoundTripper) h
 		// ErrorHandler provides a custom function to handle errors that occur
 		// during the proxying process, ensuring a consistent error format.
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
-			utils.Debugf("Proxy error: %v", err)
+			log.Printf("Proxy error: %v", err)
 			writeError(w, err, "Failed to forward request", http.StatusBadGateway)
 		},
 	}
@@ -236,7 +236,7 @@ func newReadyzHandler(nonceToken string) http.Handler {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write([]byte(nonceToken)); err != nil {
-			utils.Debugf("Failed to write readyz response: %v", err)
+			log.Printf("Failed to write readyz response: %v", err)
 		}
 	})
 }
@@ -254,7 +254,7 @@ func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handl
 
 	// Run the server in a goroutine.
 	go func() {
-		utils.Debugf("Starting proxy server on port %d", proxyConfig.Port)
+		log.Printf("Starting proxy server on port %d", proxyConfig.Port)
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			errChan <- fmt.Errorf("failed to start proxy server: %w", err)
 		}
@@ -265,13 +265,13 @@ func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handl
 	case err := <-errChan:
 		return err
 	case <-ctx.Done():
-		utils.Debugln("Shutdown signal received, shutting down server gracefully...")
+		log.Println("Shutdown signal received, shutting down server gracefully...")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), proxyConfig.ShutdownTimeout)
 		defer cancel()
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			return fmt.Errorf("server shutdown failed: %w", err)
 		}
-		utils.Debugln("Server shut down gracefully")
+		log.Println("Server shut down gracefully")
 	}
 
 	return nil
@@ -280,14 +280,14 @@ func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handl
 // run is the main application logic. It initializes the configuration, ECP client,
 // HTTP transport, and proxy handler, then starts the server.
 func run(ctx context.Context, cfg *AppConfig) error {
-	utils.Debugf("Starting ECP Proxy...")
+	log.Print("Starting ECP Proxy...")
 
 	proxyConfig := newDefaultProxyConfig()
 	proxyConfig.AllowedHostsRegex = mtlsGoogleapisHostRegex
 	proxyConfig.Port = cfg.Port
 
 	// Create tlsConfig
-	utils.Debugln("Loading ECP credential...")
+	log.Println("Loading ECP credential...")
 	key, err := client.Cred(cfg.EnterpriseCertificateFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to get ECP credential: %w", err)
@@ -338,13 +338,13 @@ func run(ctx context.Context, cfg *AppConfig) error {
 func main() {
 	cfg, err := newAppConfigFromFlags()
 	if err != nil {
-		utils.Fatalf("ECP Proxy initialization failed due to invalid configuration: %v", err)
+		log.Fatalf("ECP Proxy initialization failed due to invalid configuration: %v", err)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	if err := run(ctx, cfg); err != nil {
-		utils.Fatalf("ECP Proxy failed: %v", err)
+		log.Fatalf("ECP Proxy failed: %v", err)
 	}
 }
