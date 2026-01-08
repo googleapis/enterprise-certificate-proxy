@@ -31,25 +31,38 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/pem"
+	"io"
+	"log"
+	"os"
 	"unsafe"
 
 	"github.com/googleapis/enterprise-certificate-proxy/client"
-    "github.com/googleapis/enterprise-certificate-proxy/utils"
 )
 
 // Version is generally set by the build command. Releases of ECP must have a specific version set.
 // The version can be set when running `go build` like so `-ldflags="-X=main.Version=$CURRENT_TAG" `.
 var Version = "dev"
 
+// If ECP Logging is enabled return true
+// Otherwise return false
+func enableECPLogging() bool {
+	if os.Getenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS") != "" {
+		return true
+	}
+
+	log.SetOutput(io.Discard)
+	return false
+}
+
 func getCertPem(configFilePath string) []byte {
 	key, err := client.Cred(configFilePath)
 	if err != nil {
-		utils.Debugf("Could not create client using config %s: %v", configFilePath, err)
+		log.Printf("Could not create client using config %s: %v", configFilePath, err)
 		return nil
 	}
 	defer func() {
 		if err = key.Close(); err != nil {
-			utils.Debugf("Failed to clean up key. %v", err)
+			log.Printf("Failed to clean up key. %v", err)
 		}
 	}()
 
@@ -78,6 +91,7 @@ func ECPVersion() *C.char {
 //
 //export GetCertPem
 func GetCertPem(configFilePath *C.char, certHolder *byte, certHolderLen int) int {
+	enableECPLogging()
 	pemBytes := getCertPem(C.GoString(configFilePath))
 	if certHolder != nil {
 		cert := unsafe.Slice(certHolder, certHolderLen)
@@ -106,26 +120,27 @@ func GetCertPemForPython(configFilePath *C.char, certHolder *byte, certHolderLen
 //export Sign
 func Sign(configFilePath *C.char, digest *byte, digestLen int, sigHolder *byte, sigHolderLen int) int {
 	// First create a handle around the specified certificate and private key.
+	enableECPLogging()
 	key, err := client.Cred(C.GoString(configFilePath))
 	if err != nil {
-		utils.Debugf("Could not create client using config %s: %v", C.GoString(configFilePath), err)
+		log.Printf("Could not create client using config %s: %v", C.GoString(configFilePath), err)
 		return 0
 	}
 	defer func() {
 		if err = key.Close(); err != nil {
-			utils.Debugf("Failed to clean up key. %v", err)
+			log.Printf("Failed to clean up key. %v", err)
 		}
 	}()
 	var isRsa bool
 	switch key.Public().(type) {
 	case *ecdsa.PublicKey:
 		isRsa = false
-		utils.Debugf("the key is ecdsa key")
+		log.Print("the key is ecdsa key")
 	case *rsa.PublicKey:
 		isRsa = true
-		utils.Debugf("the key is rsa key")
+		log.Print("the key is rsa key")
 	default:
-		utils.Debugf("unsupported key type")
+		log.Printf("unsupported key type")
 		return 0
 	}
 
@@ -145,11 +160,11 @@ func Sign(configFilePath *C.char, digest *byte, digestLen int, sigHolder *byte, 
 		signature, signErr = key.Sign(nil, digestSlice, crypto.SHA256)
 	}
 	if signErr != nil {
-		utils.Errorf("failed to sign hash: %v", signErr)
+		log.Printf("failed to sign hash: %v", signErr)
 		return 0
 	}
 	if sigHolderLen < len(signature) {
-		utils.Debugf("The sigHolder buffer size %d is smaller than the signature size %d", sigHolderLen, len(signature))
+		log.Printf("The sigHolder buffer size %d is smaller than the signature size %d", sigHolderLen, len(signature))
 		return 0
 	}
 
@@ -176,12 +191,12 @@ func SignForPython(configFilePath *C.char, digest *byte, digestLen int, sigHolde
 func GetKeyType(configFilePath *C.char) *C.char {
 	key, err := client.Cred(C.GoString(configFilePath))
 	if err != nil {
-		utils.Debugf("Could not create client using config %s: %v", C.GoString(configFilePath), err)
+		log.Printf("Could not create client using config %s: %v", C.GoString(configFilePath), err)
 		return C.CString("unknown")
 	}
 	defer func() {
 		if err = key.Close(); err != nil {
-			utils.Debugf("Failed to clean up key. %v", err)
+			log.Printf("Failed to clean up key. %v", err)
 		}
 	}()
 	switch key.Public().(type) {
