@@ -26,11 +26,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"os/signal"
 	"regexp"
 	"syscall"
@@ -71,6 +73,17 @@ type AppConfig struct {
 	NonceToken                       string
 }
 
+// If ECP Logging is enabled return true
+// Otherwise return false
+func enableECPLogging() bool {
+	if os.Getenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS") != "" {
+		return true
+	}
+
+	log.SetOutput(io.Discard)
+	return false
+}
+
 func (cfg *AppConfig) validate() error {
 	if cfg.Port <= 0 {
 		return errors.New("port is required and must be a positive integer")
@@ -99,16 +112,17 @@ func newAppConfigFromFlags() (*AppConfig, error) {
 
 // ProxyConfig holds the configuration for the ECPPProxy server.
 type ProxyConfig struct {
-	Port                int            // The port for the ECPPProxy server to listen on.
-	AllowedHostsRegex   *regexp.Regexp // Regex to validate allowed target hosts.
-	TlsConfig           *tls.Config    // TLS configuration for mTLS.
-	UpstreamProxyURL    *url.URL       // Optional upstream proxy URL. This will configure the ECPPProxy transport to use this proxy.
-	TLSHandshakeTimeout time.Duration  // Max duration for TLS handshake to the target.
-	ProxyRequestTimeout time.Duration  // Max duration for the entire proxy request.
-	DialTimeout         time.Duration  // Max duration for establishing a TCP connection.
-	KeepAlivePeriod     time.Duration  // Period for TCP keep-alives.
-	IdleConnTimeout     time.Duration  // Max duration an idle connection is kept alive.
-	ShutdownTimeout     time.Duration  // Max duration to wait for graceful shutdown.
+	Port                   int            // The port for the ECPPProxy server to listen on.
+	AllowedHostsRegex      *regexp.Regexp // Regex to validate allowed target hosts.
+	AllowedGoogleApisHosts []string       // Explicitly allowed Google API hosts.
+	TlsConfig              *tls.Config    // TLS configuration for mTLS.
+	UpstreamProxyURL       *url.URL       // Optional upstream proxy URL. This will configure the ECPPProxy transport to use this proxy.
+	TLSHandshakeTimeout    time.Duration  // Max duration for TLS handshake to the target.
+	ProxyRequestTimeout    time.Duration  // Max duration for the entire proxy request.
+	DialTimeout            time.Duration  // Max duration for establishing a TCP connection.
+	KeepAlivePeriod        time.Duration  // Period for TCP keep-alives.
+	IdleConnTimeout        time.Duration  // Max duration an idle connection is kept alive.
+	ShutdownTimeout        time.Duration  // Max duration to wait for graceful shutdown.
 }
 
 // newDefaultProxyConfig creates a new ProxyConfig with default values for timeouts.
@@ -120,6 +134,9 @@ func newDefaultProxyConfig() *ProxyConfig {
 		KeepAlivePeriod:     defaultKeepAlivePeriod,
 		IdleConnTimeout:     defaultIdleConnTimeout,
 		ShutdownTimeout:     defaultShutdownTimeout,
+		AllowedGoogleApisHosts: []string{
+			"reauth.googleapis.com",
+		},
 	}
 }
 
@@ -134,6 +151,7 @@ type ErrorResponse struct {
 // and writes it to the http.ResponseWriter with the specified status code.
 // It also sets a custom header to indicate the error originated from this proxy.
 func writeError(w http.ResponseWriter, originalError error, errorMsg string, statusCode int) {
+	enableECPLogging()
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set(ecpInternalErrorHeader, "true")
 	w.WriteHeader(statusCode)
@@ -150,15 +168,25 @@ func writeError(w http.ResponseWriter, originalError error, errorMsg string, sta
 }
 
 // isAllowedHost checks if the provided host string matches the predefined
-// regular expression for allowed hosts.
-func isAllowedHost(allowedHostsRegex *regexp.Regexp, host string) bool {
-	return allowedHostsRegex.MatchString(host)
+// regular expression for allowed hosts or is one of the explicilty allowed hosts
+func isAllowedHost(allowedHostsRegex *regexp.Regexp, allowedGoogleApisHosts []string, host string) bool {
+	if allowedHostsRegex.MatchString(host) {
+		return true
+	}
+
+	for _, allowedHost := range allowedGoogleApisHosts {
+		if host == allowedHost {
+			return true
+		}
+	}
+	return false
 }
 
 // newECPProxyTransport creates an http.RoundTripper (specifically, an http.Transport)
 // configured to perform mTLS using a credential loaded from the ECP client.
 // It also configures an optional upstream proxy if one is provided in the configuration.
 func newECPProxyTransport(proxyConfig *ProxyConfig) http.RoundTripper {
+	enableECPLogging()
 	transport := &http.Transport{
 		TLSClientConfig:       proxyConfig.TlsConfig,
 		TLSHandshakeTimeout:   proxyConfig.TLSHandshakeTimeout,
@@ -183,6 +211,7 @@ func newECPProxyTransport(proxyConfig *ProxyConfig) http.RoundTripper {
 // performs validation on the incoming request to ensure it is well-formed
 // and targeting an allowed host.
 func newECPProxyHandler(proxyConfig *ProxyConfig, transport http.RoundTripper) http.Handler {
+	enableECPLogging()
 	proxy := &httputil.ReverseProxy{
 		// Director modifies the request just before it is sent to the target.
 		// It reads the target host from our custom header, sets the request URL,
@@ -219,7 +248,7 @@ func newECPProxyHandler(proxyConfig *ProxyConfig, transport http.RoundTripper) h
 			return
 		}
 
-		if !isAllowedHost(proxyConfig.AllowedHostsRegex, targetHost) {
+		if !isAllowedHost(proxyConfig.AllowedHostsRegex, proxyConfig.AllowedGoogleApisHosts, targetHost) {
 			writeError(w, fmt.Errorf("target host %q is not allowed", targetHost), "Forbidden", http.StatusForbidden)
 			return
 		}
@@ -232,6 +261,7 @@ func newECPProxyHandler(proxyConfig *ProxyConfig, transport http.RoundTripper) h
 // newReadyzHandler creates an http.Handler for the /readyz endpoint.
 // It writes the nonce token to the response body.
 func newReadyzHandler(nonceToken string) http.Handler {
+	enableECPLogging()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
@@ -244,6 +274,7 @@ func newReadyzHandler(nonceToken string) http.Handler {
 // runServer starts the HTTP server with the given handler and configuration.
 // It listens for OS signals from the provided context to perform a graceful shutdown.
 func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handler) error {
+	enableECPLogging()
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", proxyConfig.Port),
 		Handler: handler,
@@ -280,6 +311,7 @@ func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handl
 // run is the main application logic. It initializes the configuration, ECP client,
 // HTTP transport, and proxy handler, then starts the server.
 func run(ctx context.Context, cfg *AppConfig) error {
+	enableECPLogging()
 	log.Print("Starting ECP Proxy...")
 
 	proxyConfig := newDefaultProxyConfig()
@@ -336,6 +368,7 @@ func run(ctx context.Context, cfg *AppConfig) error {
 // that listens for interrupt signals (SIGINT, SIGTERM) to enable graceful
 // shutdown, and then calls the main run function.
 func main() {
+	enableECPLogging()
 	cfg, err := newAppConfigFromFlags()
 	if err != nil {
 		log.Fatalf("ECP Proxy initialization failed due to invalid configuration: %v", err)

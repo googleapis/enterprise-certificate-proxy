@@ -150,16 +150,31 @@ func TestAppConfigFromFlags(t *testing.T) {
 
 func TestIsAllowedHost(t *testing.T) {
 	tests := []struct {
-		name                string
-		isAllowedHostsRegex *regexp.Regexp
-		host                string
-		want                bool
+		name                   string
+		isAllowedHostsRegex    *regexp.Regexp
+		allowedGoogleApisHosts []string
+		host                   string
+		want                   bool
 	}{
 		{
 			name:                "allowed host storage.mtls.googleapis.com",
 			isAllowedHostsRegex: mtlsGoogleapisHostRegex,
 			host:                "storage.mtls.googleapis.com",
 			want:                true,
+		},
+		{
+			name:                   "explicitly allowed host reauth.googleapis.com",
+			isAllowedHostsRegex:    mtlsGoogleapisHostRegex,
+			allowedGoogleApisHosts: []string{"reauth.googleapis.com"},
+			host:                   "reauth.googleapis.com",
+			want:                   true,
+		},
+		{
+			name:                   "explicitly allowed host other.googleapis.com",
+			isAllowedHostsRegex:    mtlsGoogleapisHostRegex,
+			allowedGoogleApisHosts: []string{"reauth.googleapis.com", "other.googleapis.com"},
+			host:                   "other.googleapis.com",
+			want:                   true,
 		},
 		{
 			name:                "allowed host storage.mtls.sandbox.googleapis.com",
@@ -245,11 +260,25 @@ func TestIsAllowedHost(t *testing.T) {
 			host:                "127.0.0.1:8080",
 			want:                true,
 		},
+		{
+			name:                   "disallowed host with nil allowed hosts",
+			isAllowedHostsRegex:    mtlsGoogleapisHostRegex,
+			allowedGoogleApisHosts: nil,
+			host:                   "reauth.googleapis.com",
+			want:                   false,
+		},
+		{
+			name:                   "disallowed host with empty allowed hosts",
+			isAllowedHostsRegex:    mtlsGoogleapisHostRegex,
+			allowedGoogleApisHosts: []string{},
+			host:                   "reauth.googleapis.com",
+			want:                   false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isAllowedHost(tt.isAllowedHostsRegex, tt.host); got != tt.want {
+			if got := isAllowedHost(tt.isAllowedHostsRegex, tt.allowedGoogleApisHosts, tt.host); got != tt.want {
 				t.Errorf("isAllowedHost(%s, %q) = %v, want %v", tt.isAllowedHostsRegex.String(), tt.host, got, tt.want)
 			}
 		})
@@ -341,6 +370,13 @@ func TestNewECPProxyHandler(t *testing.T) {
 		{
 			name:               "Valid Request",
 			targetHostHeader:   "storage.mtls.googleapis.com",
+			expectedStatusCode: http.StatusOK,
+			expectErrorHeader:  false,
+			validateDirector:   true,
+		},
+		{
+			name:               "Valid Request with explicitly allowed host",
+			targetHostHeader:   "reauth.googleapis.com",
 			expectedStatusCode: http.StatusOK,
 			expectErrorHeader:  false,
 			validateDirector:   true,
