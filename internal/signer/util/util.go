@@ -47,10 +47,12 @@ type WindowsStore struct {
 
 // PKCS11 contains PKCS#11 parameters describing the certificate to use.
 type PKCS11 struct {
-	Slot         string `json:"slot"`     // The hexadecimal representation of the uint36 slot ID. (ex:0x1739427)
-	Label        string `json:"label"`    // The token label (ex: gecc)
-	PKCS11Module string `json:"module"`   // The path to the pkcs11 module (shared lib)
-	UserPin      string `json:"user_pin"` // Optional user pin to unlock the PKCS #11 module. If it is not defined or empty C_Login will not be called.
+	Slot            string `json:"slot"`              // The hexadecimal representation of the uint36 slot ID. (ex:0x1739427)
+	Label           string `json:"label"`             // The token label (ex: gecc)
+	PublicKeyLabel  string `json:"public_key_label"`  // The public key label (ex: gecc). If empty, Label will be used.
+	PrivateKeyLabel string `json:"private_key_label"` // The private key label (ex: gecc). If empty, Label will be used.
+	PKCS11Module    string `json:"module"`            // The path to the pkcs11 module (shared lib)
+	UserPin         string `json:"user_pin"`          // Optional user pin to unlock the PKCS #11 module. If it is not defined or empty C_Login will not be called.
 }
 
 // LoadConfig retrieves the ECP config file.
