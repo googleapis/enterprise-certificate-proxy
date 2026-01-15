@@ -30,7 +30,7 @@ const (
 var testSlot = flag.String("testSlot", "", "libsofthsm2 slot location")
 
 func makeTestKey() (*Key, error) {
-	key, err := Cred(testModule, *testSlot, testLabel, testUserPin)
+	key, err := Cred(testModule, *testSlot, testLabel, "", "", testUserPin)
 	return key, err
 }
 
@@ -116,5 +116,33 @@ func TestDecrypt(t *testing.T) {
 	decrypted = bytes.Trim(decrypted, "\x00")
 	if string(decrypted) != msg {
 		t.Errorf("Decrypt error: expected %q, got %q", msg, string(decrypted))
+	}
+}
+
+func TestCredWithDistinctLabels(t *testing.T) {
+	certLabel := "Distinct Cert"
+	keyLabel := "Distinct Key"
+	key, err := Cred(testModule, *testSlot, certLabel, keyLabel, keyLabel, testUserPin)
+	if err != nil {
+		t.Fatalf("Cred error: %q", err)
+	}
+	defer key.Close()
+
+	// Perform a simple signing operation to verify the key is usable
+	// Note: We use SHA1 because that's what the other tests and SoftHSM seem to favor in this setup,
+	// or we can use SHA256 if the key supports it. The makeTestKey uses RSA 4096.
+	// Let's use SHA256 as it is standard.
+	digest := []byte("test digest")
+	// We need to hash the digest first if we are using a Signer that expects a digest.
+	// But key.Sign usually takes the digest directly.
+	// Let's check key.Sign implementation. It calls k.signer.Sign.
+	// If it is RSA, it expects the digest to be of the correct length for the hash function.
+	h := crypto.SHA256.New()
+	h.Write(digest)
+	hashed := h.Sum(nil)
+
+	_, err = key.Sign(nil, hashed, crypto.SHA256)
+	if err != nil {
+		t.Errorf("Sign error: %q", err)
 	}
 }

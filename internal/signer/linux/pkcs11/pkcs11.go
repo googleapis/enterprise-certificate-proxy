@@ -44,7 +44,7 @@ func ParseHexString(str string) (i uint32, err error) {
 
 // Cred returns a Key wrapping the first valid certificate in the pkcs11 module
 // matching a given slot and label.
-func Cred(pkcs11Module string, slotUint32Str string, label string, userPin string) (*Key, error) {
+func Cred(pkcs11Module string, slotUint32Str string, label string, publicKeyLabel string, privateKeyLabel string, userPin string) (*Key, error) {
 	module, err := pkcs11.Open(pkcs11Module)
 	if err != nil {
 		return nil, err
@@ -56,6 +56,13 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 	kslot, err := module.Slot(slotUint32, pkcs11.Options{PIN: userPin})
 	if err != nil {
 		return nil, err
+	}
+
+	if publicKeyLabel == "" {
+		publicKeyLabel = label
+	}
+	if privateKeyLabel == "" {
+		privateKeyLabel = label
 	}
 
 	certs, err := kslot.Objects(pkcs11.Filter{Class: pkcs11.ClassCertificate, Label: label})
@@ -78,13 +85,13 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 	var kchain [][]byte
 	kchain = append(kchain, x509.Raw)
 
-	pubKeys, err := kslot.Objects(pkcs11.Filter{Class: pkcs11.ClassPublicKey, Label: label})
+	pubKeys, err := kslot.Objects(pkcs11.Filter{Class: pkcs11.ClassPublicKey, Label: publicKeyLabel})
 	if err != nil {
 		return nil, err
 	}
 
 	if len(pubKeys) < 1 {
-		return nil, fmt.Errorf("No public key object was found with label %s.", label)
+		return nil, fmt.Errorf("No public key object was found with label %s.", publicKeyLabel)
 	}
 
 	pubKey, err := pubKeys[0].PublicKey()
@@ -92,13 +99,13 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 		return nil, err
 	}
 
-	privkeys, err := kslot.Objects(pkcs11.Filter{Class: pkcs11.ClassPrivateKey, Label: label})
+	privkeys, err := kslot.Objects(pkcs11.Filter{Class: pkcs11.ClassPrivateKey, Label: privateKeyLabel})
 	if err != nil {
 		return nil, err
 	}
 
 	if len(privkeys) < 1 {
-		return nil, fmt.Errorf("No private key object was found with label %s.", label)
+		return nil, fmt.Errorf("No private key object was found with label %s.", privateKeyLabel)
 	}
 
 	privKey, err := privkeys[0].PrivateKey(pubKey)
