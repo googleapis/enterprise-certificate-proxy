@@ -39,7 +39,7 @@ jobs:
     - name: Create Binaries
       run: ./build/scripts/linux_amd64.sh
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v6
       with:
         name: linux_amd64
         path: ./build/bin/linux_amd64/*
