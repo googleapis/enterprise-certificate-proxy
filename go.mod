@@ -1,6 +1,6 @@
 module github.com/googleapis/enterprise-certificate-proxy
 
-go 1.24.1
+go 1.24.11
 
 require (
 	github.com/google/go-pkcs11 v0.3.0
