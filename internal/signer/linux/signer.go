@@ -134,7 +134,7 @@ func main() {
 	}
 
 	enterpriseCertSigner := new(EnterpriseCertSigner)
-	enterpriseCertSigner.key, err = pkcs11.Cred(config.CertConfigs.PKCS11.PKCS11Module, config.CertConfigs.PKCS11.Slot, config.CertConfigs.PKCS11.Label, config.CertConfigs.PKCS11.UserPin)
+	enterpriseCertSigner.key, err = pkcs11.Cred(config.CertConfigs.PKCS11.PKCS11Module, config.CertConfigs.PKCS11.Slot, config.CertConfigs.PKCS11.Label, config.CertConfigs.PKCS11.PublicKeyLabel, config.CertConfigs.PKCS11.PrivateKeyLabel, config.CertConfigs.PKCS11.UserPin)
 	if err != nil {
 		log.Fatalf("Failed to initialize enterprise cert signer using pkcs11: %v", err)
 	}

@@ -120,6 +120,8 @@ Below are examples of the certificate configuration file:
   "cert_configs": {
     "pkcs11": {
       "label": "YOUR_TOKEN_LABEL",
+      "public_key_label": "YOUR_PUBLIC_KEY_LABEL",
+      "private_key_label": "YOUR_PRIVATE_KEY_LABEL",
       "user_pin": "YOUR_PIN",
       "slot": "YOUR_SLOT",
       "module": "The PKCS #11 module library file path"
@@ -133,6 +135,8 @@ Below are examples of the certificate configuration file:
   "version": 1
 }
 ```
+
+The `public_key_label` and `private_key_label` fields are optional. If not provided, they default to the value of `label`.
 
 ### Logging
 
