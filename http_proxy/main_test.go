@@ -375,22 +375,9 @@ func TestNewECPProxyHandler(t *testing.T) {
 			validateDirector:   true,
 		},
 		{
-			name:               "Valid Request with explicitly allowed host",
-			targetHostHeader:   "reauth.googleapis.com",
-			expectedStatusCode: http.StatusOK,
-			expectErrorHeader:  false,
-			validateDirector:   true,
-		},
-		{
 			name:               "Missing Target Host Header",
 			targetHostHeader:   "",
 			expectedStatusCode: http.StatusBadRequest,
-			expectErrorHeader:  true,
-		},
-		{
-			name:               "Disallowed Target Host",
-			targetHostHeader:   "example.com",
-			expectedStatusCode: http.StatusForbidden,
 			expectErrorHeader:  true,
 		},
 		{
@@ -404,12 +391,10 @@ func TestNewECPProxyHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			proxyConfig := NewProxyConfigForTest()
-
 			mockRT := &mockRoundTripper{
 				roundTripError: tt.roundTripperError,
 			}
-			handler := newECPProxyHandler(proxyConfig, mockRT)
+			handler := newECPProxyHandler(mockRT)
 
 			req := httptest.NewRequest(http.MethodGet, testPath, nil)
 			if tt.targetHostHeader != "" {
@@ -476,9 +461,82 @@ func TestNewECPProxyHandler(t *testing.T) {
 	}
 }
 
+func TestRoutingTransport(t *testing.T) {
+	ecpRT := &mockRoundTripper{}
+	defaultRT := &mockRoundTripper{}
+
+	routingRT := &RoutingTransport{
+		ECPTransport:           ecpRT,
+		DefaultTransport:       defaultRT,
+		AllowedHostsRegex:      mtlsGoogleapisHostRegex,
+		AllowedGoogleApisHosts: []string{"reauth.googleapis.com"},
+	}
+
+	tests := []struct {
+		name           string
+		host           string
+		wantECP        bool
+		wantDefault    bool
+	}{
+		{
+			name:        "mTLS Host",
+			host:        "storage.mtls.googleapis.com",
+			wantECP:     true,
+			wantDefault: false,
+		},
+		{
+			name:        "Allowed API Host",
+			host:        "reauth.googleapis.com",
+			wantECP:     true,
+			wantDefault: false,
+		},
+		{
+			name:        "Regular Host",
+			host:        "google.com",
+			wantECP:     false,
+			wantDefault: true,
+		},
+		{
+			name:        "Disallowed mTLS-like Host",
+			host:        "evil.mtls.googleapis.com.fake.com",
+			wantECP:     false,
+			wantDefault: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset mocks
+			ecpRT.capturedRequest = nil
+			defaultRT.capturedRequest = nil
+
+			req := httptest.NewRequest(http.MethodGet, "https://"+tt.host, nil)
+			_, err := routingRT.RoundTrip(req)
+			if err != nil {
+				t.Fatalf("RoundTrip failed: %v", err)
+			}
+
+			if tt.wantECP {
+				if ecpRT.capturedRequest == nil {
+					t.Error("Expected ECP transport to be used, but it wasn't")
+				}
+				if defaultRT.capturedRequest != nil {
+					t.Error("Expected Default transport NOT to be used, but it was")
+				}
+			} else if tt.wantDefault {
+				if defaultRT.capturedRequest == nil {
+					t.Error("Expected Default transport to be used, but it wasn't")
+				}
+				if ecpRT.capturedRequest != nil {
+					t.Error("Expected ECP transport NOT to be used, but it was")
+				}
+			}
+		})
+	}
+}
+
 // TestNewECPProxyHandler_DirectorLogic specifically tests the Director's URL and Host rewriting.
 func TestNewECPProxyHandler_DirectorLogic(t *testing.T) {
-	proxyConfig := NewProxyConfigForTest()
 	mockRT := &mockRoundTripper{}
 
 	targetHost := "another.mtls.googleapis.com"
@@ -487,7 +545,7 @@ func TestNewECPProxyHandler_DirectorLogic(t *testing.T) {
 	req.Header.Set(targetHostHeader, targetHost)
 
 	rr := httptest.NewRecorder()
-	handler := newECPProxyHandler(proxyConfig, mockRT)
+	handler := newECPProxyHandler(mockRT)
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
@@ -519,7 +577,6 @@ func TestNewECPProxyHandler_DirectorLogic(t *testing.T) {
 
 // TestNewECPProxyHandler_ErrorHandlerInvocation ensures the custom ErrorHandler is called.
 func TestNewECPProxyHandler_ErrorHandlerInvocation(t *testing.T) {
-	proxyConfig := NewProxyConfigForTest()
 	mockRT := &mockRoundTripper{
 		roundTripError: fmt.Errorf("simulated transport error"),
 	}
@@ -528,7 +585,7 @@ func TestNewECPProxyHandler_ErrorHandlerInvocation(t *testing.T) {
 	req.Header.Set(targetHostHeader, "valid.mtls.googleapis.com")
 	rr := httptest.NewRecorder()
 
-	handler := newECPProxyHandler(proxyConfig, mockRT)
+	handler := newECPProxyHandler(mockRT)
 	handler.ServeHTTP(rr, req)
 
 	// Verify that the ErrorHandler logic (which calls writeError) was executed
@@ -579,13 +636,12 @@ func TestReadyzHandler(t *testing.T) {
 
 func TestMuxRouting(t *testing.T) {
 	nonceToken := "test-nonce"
-	proxyConfig := NewProxyConfigForTest()
 	mockRT := &mockRoundTripper{}
 
 	// Create a ServeMux and register handlers
 	mux := http.NewServeMux()
 	mux.Handle("/readyz", newReadyzHandler(nonceToken))
-	mux.Handle("/", newECPProxyHandler(proxyConfig, mockRT))
+	mux.Handle("/", newECPProxyHandler(mockRT))
 
 	t.Run("Test /readyz endpoint", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/readyz", nil)

@@ -135,6 +135,22 @@ func createTLSBackendServer(expectedResponse string, expectedStatusCode int, cer
 	return backend
 }
 
+func createSimpleTLSBackendServer(expectedResponse string, expectedStatusCode int, certs *MTLSInMemoryCerts) *httptest.Server {
+	backend := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if expectedStatusCode == http.StatusOK {
+			fmt.Fprint(w, expectedResponse)
+		} else {
+			// Write error
+			http.Error(w, expectedResponse, expectedStatusCode)
+		}
+	}))
+	backend.TLS = &tls.Config{
+		Certificates: []tls.Certificate{certs.ServerCert},
+		// No ClientAuth required for simple TLS
+	}
+	return backend
+}
+
 // Send HTTP requests to ECP Proxy. Validate responses.
 func TestECPProxyWithHTTPClient(t *testing.T) {
 	// Init MTLS backendServer
@@ -147,12 +163,18 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 	backendServerReturnsError.StartTLS()
 	defer backendServerReturnsError.Close()
 
+	// Init plain HTTPS backend server (no mTLS client auth required)
+	plainBackendServer := createSimpleTLSBackendServer(successMessage, http.StatusOK, certs1)
+	plainBackendServer.StartTLS()
+	defer plainBackendServer.Close()
+
 	// Init a passthrough proxy, to test proxy chaining
 	passthroughProxyServer := httptest.NewServer(http.HandlerFunc(ProxyHandler))
 	defer passthroughProxyServer.Close()
 
 	validMTLSBackendServerHost := validMTLSBackendServer.Listener.Addr().String()       // e.g. "127.0.0.1:12345"
 	backendServerReturnsErrorHost := backendServerReturnsError.Listener.Addr().String() // e.g. "127.0.0.1:12345"
+	plainBackendServerHost := plainBackendServer.Listener.Addr().String()
 	validPassthroughURL := passthroughProxyServer.URL
 	invalidPassthroughURL := "1234-bad-server.com"
 
@@ -175,19 +197,20 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 			wantECPProxyError:       false,
 		},
 		{
-			name:                    "target header is not allowed",
+			name:                    "successful plain http request (fallback)",
 			ecpMTLSCerts:            certs1,
-			targetHostHeader:        "127.0.0.0:1",
+			targetHostHeader:        plainBackendServerHost,
 			passthroughProxyAddress: "",
-			wantStatusCode:          http.StatusForbidden,
-			wantECPProxyError:       true,
+			wantStatusCode:          http.StatusOK,
+			expectedResponseBody:    successMessage,
+			wantECPProxyError:       false,
 		},
 		{
-			name:                    "invalid target header",
+			name:                    "invalid target header (dns failure)",
 			ecpMTLSCerts:            certs1,
 			targetHostHeader:        "123-not-allowed.com",
 			passthroughProxyAddress: "",
-			wantStatusCode:          http.StatusForbidden,
+			wantStatusCode:          http.StatusBadGateway,
 			wantECPProxyError:       true,
 		},
 		{
@@ -225,20 +248,13 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 			wantECPProxyError:       false,
 		},
 		{
-			name:                    "target header is not allowed, with proxy chain",
+			name:                    "successful plain http request with proxy chain",
 			ecpMTLSCerts:            certs1,
-			targetHostHeader:        "127.0.0.0:1",
+			targetHostHeader:        plainBackendServerHost,
 			passthroughProxyAddress: validPassthroughURL,
-			wantStatusCode:          http.StatusForbidden,
-			wantECPProxyError:       true,
-		},
-		{
-			name:                    "target header not allowed header with proxy chain",
-			ecpMTLSCerts:            certs1,
-			targetHostHeader:        "123-not-allowed.com",
-			passthroughProxyAddress: validPassthroughURL,
-			wantStatusCode:          http.StatusForbidden,
-			wantECPProxyError:       true,
+			wantStatusCode:          http.StatusOK,
+			expectedResponseBody:    successMessage,
+			wantECPProxyError:       false,
 		},
 		{
 			name:                    "empty target header with proxy chain",
@@ -302,8 +318,21 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 				proxyConfig.UpstreamProxyURL = passthroughProxyServerURL
 			}
 
-			transport := newECPProxyTransport(proxyConfig)
-			handler := newECPProxyHandler(proxyConfig, transport)
+			ecpTransport := newTransport(proxyConfig.TlsConfig, proxyConfig)
+			
+			defaultTLSConfig := &tls.Config{
+				RootCAs: tc.ecpMTLSCerts.CAPool,
+			}
+			defaultTransport := newTransport(defaultTLSConfig, proxyConfig)
+
+			routingTransport := &RoutingTransport{
+				ECPTransport:           ecpTransport,
+				DefaultTransport:       defaultTransport,
+				AllowedHostsRegex:      proxyConfig.AllowedHostsRegex,
+				AllowedGoogleApisHosts: proxyConfig.AllowedGoogleApisHosts,
+			}
+
+			handler := newECPProxyHandler(routingTransport)
 			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 			defer stop()
 

@@ -182,13 +182,12 @@ func isAllowedHost(allowedHostsRegex *regexp.Regexp, allowedGoogleApisHosts []st
 	return false
 }
 
-// newECPProxyTransport creates an http.RoundTripper (specifically, an http.Transport)
-// configured to perform mTLS using a credential loaded from the ECP client.
-// It also configures an optional upstream proxy if one is provided in the configuration.
-func newECPProxyTransport(proxyConfig *ProxyConfig) http.RoundTripper {
+// newTransport creates an http.RoundTripper configured with the given TLS config
+// and optional upstream proxy.
+func newTransport(tlsConfig *tls.Config, proxyConfig *ProxyConfig) http.RoundTripper {
 	enableECPLogging()
 	transport := &http.Transport{
-		TLSClientConfig:       proxyConfig.TlsConfig,
+		TLSClientConfig:       tlsConfig,
 		TLSHandshakeTimeout:   proxyConfig.TLSHandshakeTimeout,
 		ResponseHeaderTimeout: proxyConfig.ProxyRequestTimeout,
 		DialContext: (&net.Dialer{
@@ -206,11 +205,26 @@ func newECPProxyTransport(proxyConfig *ProxyConfig) http.RoundTripper {
 	return transport
 }
 
+// RoutingTransport routes requests to either the ECP mTLS transport or the default
+// transport based on the target host.
+type RoutingTransport struct {
+	ECPTransport           http.RoundTripper
+	DefaultTransport       http.RoundTripper
+	AllowedHostsRegex      *regexp.Regexp
+	AllowedGoogleApisHosts []string
+}
+
+// RoundTrip executes a single HTTP transaction, routing it to the appropriate transport.
+func (t *RoutingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if isAllowedHost(t.AllowedHostsRegex, t.AllowedGoogleApisHosts, req.URL.Host) {
+		return t.ECPTransport.RoundTrip(req)
+	}
+	return t.DefaultTransport.RoundTrip(req)
+}
+
 // newECPProxyHandler creates the primary http.Handler for the ECP Proxy server.
-// It uses httputil.ReverseProxy to forward requests. Before forwarding, it
-// performs validation on the incoming request to ensure it is well-formed
-// and targeting an allowed host.
-func newECPProxyHandler(proxyConfig *ProxyConfig, transport http.RoundTripper) http.Handler {
+// It uses httputil.ReverseProxy to forward requests.
+func newECPProxyHandler(transport http.RoundTripper) http.Handler {
 	enableECPLogging()
 	proxy := &httputil.ReverseProxy{
 		// Director modifies the request just before it is sent to the target.
@@ -245,11 +259,6 @@ func newECPProxyHandler(proxyConfig *ProxyConfig, transport http.RoundTripper) h
 		targetHost := r.Header.Get(targetHostHeader)
 		if targetHost == "" {
 			writeError(w, fmt.Errorf("missing %s header", targetHostHeader), "Bad Request", http.StatusBadRequest)
-			return
-		}
-
-		if !isAllowedHost(proxyConfig.AllowedHostsRegex, proxyConfig.AllowedGoogleApisHosts, targetHost) {
-			writeError(w, fmt.Errorf("target host %q is not allowed", targetHost), "Forbidden", http.StatusForbidden)
 			return
 		}
 
@@ -349,7 +358,15 @@ func run(ctx context.Context, cfg *AppConfig) error {
 	}
 
 	// Create Proxy Transport
-	ecpProxyTransport := newECPProxyTransport(proxyConfig)
+	ecpTransport := newTransport(proxyConfig.TlsConfig, proxyConfig)
+	defaultTransport := newTransport(nil, proxyConfig)
+
+	routingTransport := &RoutingTransport{
+		ECPTransport:           ecpTransport,
+		DefaultTransport:       defaultTransport,
+		AllowedHostsRegex:      proxyConfig.AllowedHostsRegex,
+		AllowedGoogleApisHosts: proxyConfig.AllowedGoogleApisHosts,
+	}
 
 	// Create a ServeMux to route requests.
 	mux := http.NewServeMux()
@@ -358,7 +375,7 @@ func run(ctx context.Context, cfg *AppConfig) error {
 	mux.Handle("/readyz", newReadyzHandler(cfg.NonceToken))
 
 	// The main ecp proxy handler handles all other requests.
-	mux.Handle("/", newECPProxyHandler(proxyConfig, ecpProxyTransport))
+	mux.Handle("/", newECPProxyHandler(routingTransport))
 
 	// Run the server
 	return runServer(ctx, proxyConfig, mux)
