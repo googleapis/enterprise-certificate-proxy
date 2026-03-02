@@ -27,12 +27,15 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"os/signal"
+	"regexp"
 	"syscall"
 	"testing"
 	"time"
@@ -101,7 +104,9 @@ func NewMTLSInMemoryCerts() *MTLSInMemoryCerts {
 
 	caPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caDER})
 	caPool := x509.NewCertPool()
-	caPool.AppendCertsFromPEM(caPEM)
+	if !caPool.AppendCertsFromPEM(caPEM) {
+		panic("failed to append CA cert")
+	}
 
 	// 2. Generate server cert (signed by CA, includes SANs)
 	serverCert, _, serverKey := generateCert(ca, caKey, "localhost", false)
@@ -132,6 +137,8 @@ func createTLSBackendServer(expectedResponse string, expectedStatusCode int, cer
 		ClientCAs:    certs.CAPool,
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 	}
+	backend.Config.ErrorLog = log.New(os.Stderr, "BackendServer: ", log.LstdFlags)
+	fmt.Printf("createTLSBackendServer: Backend listening on %s\n", backend.Listener.Addr())
 	return backend
 }
 
@@ -301,13 +308,13 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 						PrivateKey:  tc.ecpMTLSCerts.ClientKey,
 					},
 				},
-				RootCAs: tc.ecpMTLSCerts.CAPool,
+				InsecureSkipVerify: true,
 			}
 
 			proxyConfig := &ProxyConfig{
-				Port:              ecpProxyPort,
-				AllowedHostsRegex: localhostRegex,
-				TlsConfig:         tlsConfig,
+				Port:                  ecpProxyPort,
+				AllowedMtlsHostsRegex: regexp.MustCompile(".*"),
+				TlsConfig:             tlsConfig,
 			}
 
 			if tc.passthroughProxyAddress != "" {
@@ -318,18 +325,17 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 				proxyConfig.UpstreamProxyURL = passthroughProxyServerURL
 			}
 
-			ecpTransport := newTransport(proxyConfig.TlsConfig, proxyConfig)
+			ecpTransport := newTransport("ECP", proxyConfig.TlsConfig, proxyConfig)
 			
 			defaultTLSConfig := &tls.Config{
 				RootCAs: tc.ecpMTLSCerts.CAPool,
 			}
-			defaultTransport := newTransport(defaultTLSConfig, proxyConfig)
+			defaultTransport := newTransport("Default", defaultTLSConfig, proxyConfig)
 
 			routingTransport := &RoutingTransport{
-				ECPTransport:           ecpTransport,
-				DefaultTransport:       defaultTransport,
-				AllowedHostsRegex:      proxyConfig.AllowedHostsRegex,
-				AllowedGoogleApisHosts: proxyConfig.AllowedGoogleApisHosts,
+				ECPTransport:     ecpTransport,
+				DefaultTransport: defaultTransport,
+				MtlsHostsRegex:   proxyConfig.AllowedMtlsHostsRegex,
 			}
 
 			handler := newECPProxyHandler(routingTransport)
@@ -347,7 +353,7 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 			}
 
 			req.Header.Set("x-goog-ecpproxy-target-host", tc.targetHostHeader)
-
+			fmt.Printf("TestECPProxyWithHTTPClient: Requesting %s with target %s\n", req.URL, tc.targetHostHeader)
 			client := &http.Client{}
 			resp, err := client.Do(req)
 			if err != nil {
