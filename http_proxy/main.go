@@ -202,12 +202,9 @@ type RoutingTransport struct {
 
 // RoundTrip executes a single HTTP transaction, routing it to the appropriate transport.
 func (t *RoutingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	log.Printf("RoutingTransport: RoundTrip called for %s", req.URL)
 	if isMtlsHost(t.MtlsHostsRegex, req.URL.Host) {
-		log.Printf("RoutingTransport: Routing to ECPTransport for %s", req.URL.Host)
 		return t.ECPTransport.RoundTrip(req)
 	}
-	log.Printf("RoutingTransport: Routing to DefaultTransport for %s", req.URL.Host)
 	return t.DefaultTransport.RoundTrip(req)
 }
 
@@ -347,8 +344,8 @@ func run(ctx context.Context, cfg *AppConfig) error {
 	}
 
 	// Create Proxy Transport
-	ecpTransport := newTransport(proxyConfig.TlsConfig, proxyConfig)
-	defaultTransport := newTransport(nil, proxyConfig)
+	ecpTransport := newTransport("ECP", proxyConfig.TlsConfig, proxyConfig)
+	defaultTransport := newTransport("Default", nil, proxyConfig)
 
 	routingTransport := &RoutingTransport{
 		ECPTransport:     ecpTransport,
