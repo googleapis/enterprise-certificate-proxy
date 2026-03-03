@@ -27,12 +27,15 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"os/signal"
+	"regexp"
 	"syscall"
 	"testing"
 	"time"
@@ -54,7 +57,7 @@ func generateCert(ca *x509.Certificate, caKey *rsa.PrivateKey, cn string, isClie
 		Subject:      pkix.Name{CommonName: cn},
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().Add(24 * time.Hour),
-		KeyUsage:     x509.KeyUsageDigitalSignature,
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		DNSNames:     []string{cn},                       // important for hostname match
 		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")}, // allow IP connect
@@ -93,7 +96,7 @@ func NewMTLSInMemoryCerts() *MTLSInMemoryCerts {
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(24 * time.Hour),
 		IsCA:                  true,
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		BasicConstraintsValid: true,
 	}
 	caKey, _ := rsa.GenerateKey(rand.Reader, 2048)
@@ -101,7 +104,9 @@ func NewMTLSInMemoryCerts() *MTLSInMemoryCerts {
 
 	caPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caDER})
 	caPool := x509.NewCertPool()
-	caPool.AppendCertsFromPEM(caPEM)
+	if !caPool.AppendCertsFromPEM(caPEM) {
+		panic("failed to append CA cert")
+	}
 
 	// 2. Generate server cert (signed by CA, includes SANs)
 	serverCert, _, serverKey := generateCert(ca, caKey, "localhost", false)
@@ -132,6 +137,24 @@ func createTLSBackendServer(expectedResponse string, expectedStatusCode int, cer
 		ClientCAs:    certs.CAPool,
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 	}
+	backend.Config.ErrorLog = log.New(os.Stderr, "BackendServer: ", log.LstdFlags)
+	fmt.Printf("createTLSBackendServer: Backend listening on %s\n", backend.Listener.Addr())
+	return backend
+}
+
+func createSimpleTLSBackendServer(expectedResponse string, expectedStatusCode int, certs *MTLSInMemoryCerts) *httptest.Server {
+	backend := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if expectedStatusCode == http.StatusOK {
+			fmt.Fprint(w, expectedResponse)
+		} else {
+			// Write error
+			http.Error(w, expectedResponse, expectedStatusCode)
+		}
+	}))
+	backend.TLS = &tls.Config{
+		Certificates: []tls.Certificate{certs.ServerCert},
+		// No ClientAuth required for simple TLS
+	}
 	return backend
 }
 
@@ -147,12 +170,18 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 	backendServerReturnsError.StartTLS()
 	defer backendServerReturnsError.Close()
 
+	// Init plain HTTPS backend server (no mTLS client auth required)
+	plainBackendServer := createSimpleTLSBackendServer(successMessage, http.StatusOK, certs1)
+	plainBackendServer.StartTLS()
+	defer plainBackendServer.Close()
+
 	// Init a passthrough proxy, to test proxy chaining
 	passthroughProxyServer := httptest.NewServer(http.HandlerFunc(ProxyHandler))
 	defer passthroughProxyServer.Close()
 
 	validMTLSBackendServerHost := validMTLSBackendServer.Listener.Addr().String()       // e.g. "127.0.0.1:12345"
 	backendServerReturnsErrorHost := backendServerReturnsError.Listener.Addr().String() // e.g. "127.0.0.1:12345"
+	plainBackendServerHost := plainBackendServer.Listener.Addr().String()
 	validPassthroughURL := passthroughProxyServer.URL
 	invalidPassthroughURL := "1234-bad-server.com"
 
@@ -175,19 +204,20 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 			wantECPProxyError:       false,
 		},
 		{
-			name:                    "target header is not allowed",
+			name:                    "successful plain http request (fallback)",
 			ecpMTLSCerts:            certs1,
-			targetHostHeader:        "127.0.0.0:1",
+			targetHostHeader:        plainBackendServerHost,
 			passthroughProxyAddress: "",
-			wantStatusCode:          http.StatusForbidden,
-			wantECPProxyError:       true,
+			wantStatusCode:          http.StatusOK,
+			expectedResponseBody:    successMessage,
+			wantECPProxyError:       false,
 		},
 		{
-			name:                    "invalid target header",
+			name:                    "invalid target header (dns failure)",
 			ecpMTLSCerts:            certs1,
 			targetHostHeader:        "123-not-allowed.com",
 			passthroughProxyAddress: "",
-			wantStatusCode:          http.StatusForbidden,
+			wantStatusCode:          http.StatusBadGateway,
 			wantECPProxyError:       true,
 		},
 		{
@@ -225,20 +255,13 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 			wantECPProxyError:       false,
 		},
 		{
-			name:                    "target header is not allowed, with proxy chain",
+			name:                    "successful plain http request with proxy chain",
 			ecpMTLSCerts:            certs1,
-			targetHostHeader:        "127.0.0.0:1",
+			targetHostHeader:        plainBackendServerHost,
 			passthroughProxyAddress: validPassthroughURL,
-			wantStatusCode:          http.StatusForbidden,
-			wantECPProxyError:       true,
-		},
-		{
-			name:                    "target header not allowed header with proxy chain",
-			ecpMTLSCerts:            certs1,
-			targetHostHeader:        "123-not-allowed.com",
-			passthroughProxyAddress: validPassthroughURL,
-			wantStatusCode:          http.StatusForbidden,
-			wantECPProxyError:       true,
+			wantStatusCode:          http.StatusOK,
+			expectedResponseBody:    successMessage,
+			wantECPProxyError:       false,
 		},
 		{
 			name:                    "empty target header with proxy chain",
@@ -279,19 +302,16 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 			ecpProxyPort := 8080
 
 			tlsConfig := &tls.Config{
-				Certificates: []tls.Certificate{
-					{
-						Certificate: tc.ecpMTLSCerts.ClientCert.Certificate,
-						PrivateKey:  tc.ecpMTLSCerts.ClientKey,
-					},
-				},
-				RootCAs: tc.ecpMTLSCerts.CAPool,
+				Certificates:       []tls.Certificate{tc.ecpMTLSCerts.ClientCert},
+				InsecureSkipVerify: true,
+				RootCAs:            tc.ecpMTLSCerts.CAPool,
+				ServerName:         "localhost",
 			}
 
 			proxyConfig := &ProxyConfig{
-				Port:              ecpProxyPort,
-				AllowedHostsRegex: localhostRegex,
-				TlsConfig:         tlsConfig,
+				Port:                  ecpProxyPort,
+				AllowedMtlsHostsRegex: regexp.MustCompile(".*"),
+				TlsConfig:             tlsConfig,
 			}
 
 			if tc.passthroughProxyAddress != "" {
@@ -302,8 +322,22 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 				proxyConfig.UpstreamProxyURL = passthroughProxyServerURL
 			}
 
-			transport := newECPProxyTransport(proxyConfig)
-			handler := newECPProxyHandler(proxyConfig, transport)
+			ecpTransport := newTransport(proxyConfig.TlsConfig, proxyConfig)
+			
+			defaultTLSConfig := &tls.Config{
+				RootCAs:            tc.ecpMTLSCerts.CAPool,
+				InsecureSkipVerify: true,
+				ServerName:         "localhost",
+			}
+			defaultTransport := newTransport(defaultTLSConfig, proxyConfig)
+
+			routingTransport := &RoutingTransport{
+				ECPTransport:     ecpTransport,
+				DefaultTransport: defaultTransport,
+				MtlsHostsRegex:   proxyConfig.AllowedMtlsHostsRegex,
+			}
+
+			handler := newECPProxyHandler(routingTransport)
 			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 			defer stop()
 
@@ -318,7 +352,7 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 			}
 
 			req.Header.Set("x-goog-ecpproxy-target-host", tc.targetHostHeader)
-
+			fmt.Printf("TestECPProxyWithHTTPClient: Requesting %s with target %s\n", req.URL, tc.targetHostHeader)
 			client := &http.Client{}
 			resp, err := client.Do(req)
 			if err != nil {

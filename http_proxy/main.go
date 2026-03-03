@@ -113,8 +113,7 @@ func newAppConfigFromFlags() (*AppConfig, error) {
 // ProxyConfig holds the configuration for the ECPPProxy server.
 type ProxyConfig struct {
 	Port                   int            // The port for the ECPPProxy server to listen on.
-	AllowedHostsRegex      *regexp.Regexp // Regex to validate allowed target hosts.
-	AllowedGoogleApisHosts []string       // Explicitly allowed Google API hosts.
+	AllowedMtlsHostsRegex  *regexp.Regexp // Regex to validate allowed mTLS hosts.
 	TlsConfig              *tls.Config    // TLS configuration for mTLS.
 	UpstreamProxyURL       *url.URL       // Optional upstream proxy URL. This will configure the ECPPProxy transport to use this proxy.
 	TLSHandshakeTimeout    time.Duration  // Max duration for TLS handshake to the target.
@@ -134,9 +133,6 @@ func newDefaultProxyConfig() *ProxyConfig {
 		KeepAlivePeriod:     defaultKeepAlivePeriod,
 		IdleConnTimeout:     defaultIdleConnTimeout,
 		ShutdownTimeout:     defaultShutdownTimeout,
-		AllowedGoogleApisHosts: []string{
-			"reauth.googleapis.com",
-		},
 	}
 }
 
@@ -167,28 +163,18 @@ func writeError(w http.ResponseWriter, originalError error, errorMsg string, sta
 	}
 }
 
-// isAllowedHost checks if the provided host string matches the predefined
-// regular expression for allowed hosts or is one of the explicilty allowed hosts
-func isAllowedHost(allowedHostsRegex *regexp.Regexp, allowedGoogleApisHosts []string, host string) bool {
-	if allowedHostsRegex.MatchString(host) {
-		return true
-	}
-
-	for _, allowedHost := range allowedGoogleApisHosts {
-		if host == allowedHost {
-			return true
-		}
-	}
-	return false
+// isMtlsHost checks if the provided host string matches the predefined
+// regular expression for allowed mTLS hosts.
+func isMtlsHost(mtlsHostsRegex *regexp.Regexp, host string) bool {
+	return mtlsHostsRegex.MatchString(host)
 }
 
-// newECPProxyTransport creates an http.RoundTripper (specifically, an http.Transport)
-// configured to perform mTLS using a credential loaded from the ECP client.
-// It also configures an optional upstream proxy if one is provided in the configuration.
-func newECPProxyTransport(proxyConfig *ProxyConfig) http.RoundTripper {
+// newTransport creates an http.RoundTripper configured with the given TLS config
+// and optional upstream proxy.
+func newTransport(tlsConfig *tls.Config, proxyConfig *ProxyConfig) http.RoundTripper {
 	enableECPLogging()
 	transport := &http.Transport{
-		TLSClientConfig:       proxyConfig.TlsConfig,
+		TLSClientConfig:       tlsConfig,
 		TLSHandshakeTimeout:   proxyConfig.TLSHandshakeTimeout,
 		ResponseHeaderTimeout: proxyConfig.ProxyRequestTimeout,
 		DialContext: (&net.Dialer{
@@ -206,11 +192,25 @@ func newECPProxyTransport(proxyConfig *ProxyConfig) http.RoundTripper {
 	return transport
 }
 
+// RoutingTransport routes requests to either the ECP mTLS transport or the default
+// transport based on the target host.
+type RoutingTransport struct {
+	ECPTransport     http.RoundTripper
+	DefaultTransport http.RoundTripper
+	MtlsHostsRegex   *regexp.Regexp
+}
+
+// RoundTrip executes a single HTTP transaction, routing it to the appropriate transport.
+func (t *RoutingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if isMtlsHost(t.MtlsHostsRegex, req.URL.Host) {
+		return t.ECPTransport.RoundTrip(req)
+	}
+	return t.DefaultTransport.RoundTrip(req)
+}
+
 // newECPProxyHandler creates the primary http.Handler for the ECP Proxy server.
-// It uses httputil.ReverseProxy to forward requests. Before forwarding, it
-// performs validation on the incoming request to ensure it is well-formed
-// and targeting an allowed host.
-func newECPProxyHandler(proxyConfig *ProxyConfig, transport http.RoundTripper) http.Handler {
+// It uses httputil.ReverseProxy to forward requests.
+func newECPProxyHandler(transport http.RoundTripper) http.Handler {
 	enableECPLogging()
 	proxy := &httputil.ReverseProxy{
 		// Director modifies the request just before it is sent to the target.
@@ -248,11 +248,6 @@ func newECPProxyHandler(proxyConfig *ProxyConfig, transport http.RoundTripper) h
 			return
 		}
 
-		if !isAllowedHost(proxyConfig.AllowedHostsRegex, proxyConfig.AllowedGoogleApisHosts, targetHost) {
-			writeError(w, fmt.Errorf("target host %q is not allowed", targetHost), "Forbidden", http.StatusForbidden)
-			return
-		}
-
 		// If validation passes, let the ReverseProxy handle the request.
 		proxy.ServeHTTP(w, r)
 	})
@@ -276,8 +271,8 @@ func newReadyzHandler(nonceToken string) http.Handler {
 func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handler) error {
 	enableECPLogging()
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", proxyConfig.Port),
-		Handler: handler,
+		Addr:     fmt.Sprintf(":%d", proxyConfig.Port),
+		Handler:  handler,
 	}
 
 	// Channel to receive errors from the server's ListenAndServe goroutine.
@@ -315,7 +310,7 @@ func run(ctx context.Context, cfg *AppConfig) error {
 	log.Print("Starting ECP Proxy...")
 
 	proxyConfig := newDefaultProxyConfig()
-	proxyConfig.AllowedHostsRegex = mtlsGoogleapisHostRegex
+	proxyConfig.AllowedMtlsHostsRegex = mtlsGoogleapisHostRegex
 	proxyConfig.Port = cfg.Port
 
 	// Create tlsConfig
@@ -349,7 +344,14 @@ func run(ctx context.Context, cfg *AppConfig) error {
 	}
 
 	// Create Proxy Transport
-	ecpProxyTransport := newECPProxyTransport(proxyConfig)
+	ecpTransport := newTransport(proxyConfig.TlsConfig, proxyConfig)
+	defaultTransport := newTransport(nil, proxyConfig)
+
+	routingTransport := &RoutingTransport{
+		ECPTransport:     ecpTransport,
+		DefaultTransport: defaultTransport,
+		MtlsHostsRegex:   proxyConfig.AllowedMtlsHostsRegex,
+	}
 
 	// Create a ServeMux to route requests.
 	mux := http.NewServeMux()
@@ -358,7 +360,7 @@ func run(ctx context.Context, cfg *AppConfig) error {
 	mux.Handle("/readyz", newReadyzHandler(cfg.NonceToken))
 
 	// The main ecp proxy handler handles all other requests.
-	mux.Handle("/", newECPProxyHandler(proxyConfig, ecpProxyTransport))
+	mux.Handle("/", newECPProxyHandler(routingTransport))
 
 	// Run the server
 	return runServer(ctx, proxyConfig, mux)
