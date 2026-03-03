@@ -93,9 +93,6 @@ func handleTunneling(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Respond to the client that the connection is established
-	w.WriteHeader(http.StatusOK)
-
 	// Hijack the client's connection to get direct access to the underlying TCP connection
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
@@ -107,6 +104,9 @@ func handleTunneling(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 		return
 	}
+
+	// Respond to the client that the connection is established
+	clientConn.Write([]byte("HTTP/1.1 200 Connection Established\r\n\r\n"))
 
 	// Start goroutines to transfer data in both directions
 	go transfer(destConn, clientConn)

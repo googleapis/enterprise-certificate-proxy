@@ -57,7 +57,7 @@ func generateCert(ca *x509.Certificate, caKey *rsa.PrivateKey, cn string, isClie
 		Subject:      pkix.Name{CommonName: cn},
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().Add(24 * time.Hour),
-		KeyUsage:     x509.KeyUsageDigitalSignature,
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		DNSNames:     []string{cn},                       // important for hostname match
 		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")}, // allow IP connect
@@ -96,7 +96,7 @@ func NewMTLSInMemoryCerts() *MTLSInMemoryCerts {
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().Add(24 * time.Hour),
 		IsCA:                  true,
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		BasicConstraintsValid: true,
 	}
 	caKey, _ := rsa.GenerateKey(rand.Reader, 2048)
@@ -302,13 +302,10 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 			ecpProxyPort := 8080
 
 			tlsConfig := &tls.Config{
-				Certificates: []tls.Certificate{
-					{
-						Certificate: tc.ecpMTLSCerts.ClientCert.Certificate,
-						PrivateKey:  tc.ecpMTLSCerts.ClientKey,
-					},
-				},
+				Certificates:       []tls.Certificate{tc.ecpMTLSCerts.ClientCert},
 				InsecureSkipVerify: true,
+				RootCAs:            tc.ecpMTLSCerts.CAPool,
+				ServerName:         "localhost",
 			}
 
 			proxyConfig := &ProxyConfig{
@@ -328,7 +325,9 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 			ecpTransport := newTransport(proxyConfig.TlsConfig, proxyConfig)
 			
 			defaultTLSConfig := &tls.Config{
-				RootCAs: tc.ecpMTLSCerts.CAPool,
+				RootCAs:            tc.ecpMTLSCerts.CAPool,
+				InsecureSkipVerify: true,
+				ServerName:         "localhost",
 			}
 			defaultTransport := newTransport(defaultTLSConfig, proxyConfig)
 

@@ -344,8 +344,8 @@ func run(ctx context.Context, cfg *AppConfig) error {
 	}
 
 	// Create Proxy Transport
-	ecpTransport := newTransport("ECP", proxyConfig.TlsConfig, proxyConfig)
-	defaultTransport := newTransport("Default", nil, proxyConfig)
+	ecpTransport := newTransport(proxyConfig.TlsConfig, proxyConfig)
+	defaultTransport := newTransport(nil, proxyConfig)
 
 	routingTransport := &RoutingTransport{
 		ECPTransport:     ecpTransport,
