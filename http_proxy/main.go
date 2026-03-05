@@ -53,7 +53,7 @@ const (
 // Default timeouts and configurations for the HTTP client and server.
 const (
 	defaultTLSHandshakeTimeout = 10 * time.Second
-	defaultProxyRequestTimeout = 120 * time.Second
+	defaultProxyRequestTimeout = 180 * time.Second
 	defaultDialTimeout         = 5 * time.Second
 	defaultKeepAlivePeriod     = 30 * time.Second
 	defaultIdleConnTimeout     = 30 * time.Second
