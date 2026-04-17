@@ -25,7 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/rpc"
 	"os"
 	"os/exec"
 
@@ -83,7 +82,7 @@ type DecryptArgs struct {
 // Key implements credential.Credential by holding the executed signer subprocess.
 type Key struct {
 	cmd       *exec.Cmd        // Pointer to the signer subprocess.
-	client    *rpc.Client      // Pointer to the rpc client that communicates with the signer subprocess.
+	client    *rpcClient       // Pointer to the rpc client that communicates with the signer subprocess.
 	publicKey crypto.PublicKey // Public key of loaded certificate.
 	chain     [][]byte         // Certificate chain of loaded certificate.
 }
@@ -179,7 +178,7 @@ func Cred(configFilePath string) (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
-	k.client = rpc.NewClient(&Connection{kout, kin})
+	k.client = newRPCClient(&Connection{kout, kin})
 
 	if err := k.cmd.Start(); err != nil {
 		return nil, fmt.Errorf("starting enterprise cert signer subprocess: %w", err)
