@@ -15,8 +15,7 @@
 // +build darwin,cgo
 
 // Package keychain contains functions for retrieving certificates from the Darwin Keychain.
-//nolint:govet
-package keychain
+package keychain //nolint:govet
 
 /*
 #cgo CFLAGS: -mmacosx-version-min=10.12

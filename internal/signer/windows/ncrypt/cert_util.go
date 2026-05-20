@@ -16,7 +16,7 @@
 
 // Cert_util provides helpers for working with Windows certificates via crypt32.dll
 
-package ncrypt
+package ncrypt //nolint:govet
 
 import (
 	"crypto"
@@ -206,11 +206,12 @@ func certContextToX509(ctx *windows.CertContext) (*x509.Certificate, error) {
 // matching a given issuer string.
 func Cred(issuer string, storeName string, provider string) (*Key, error) {
 	var certStore uint32
-	if provider == "local_machine" {
+	switch provider {
+	case "local_machine":
 		certStore = uint32(certStoreLocalMachine)
-	} else if provider == "current_user" {
+	case "current_user":
 		certStore = uint32(certStoreCurrentUser)
-	} else {
+	default:
 		return nil, errors.New("provider must be local_machine or current_user")
 	}
 	storeNamePtr, err := windows.UTF16PtrFromString(storeName)
