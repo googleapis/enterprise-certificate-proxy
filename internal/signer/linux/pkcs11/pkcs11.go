@@ -34,7 +34,7 @@ import (
 
 // ParseHexString parses hexadecimal string into uint32
 func ParseHexString(str string) (i uint32, err error) {
-	stripped := strings.Replace(str, "0x", "", -1)
+	stripped := strings.ReplaceAll(str, "0x", "")
 	resultUint64, err := strconv.ParseUint(stripped, 16, 32)
 	if err != nil {
 		return 0, err
@@ -64,7 +64,7 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 	}
 
 	if len(certs) < 1 {
-		return nil, fmt.Errorf("No certificate object was found with label %s.", label)
+		return nil, fmt.Errorf("no certificate object was found with label %s", label)
 	}
 
 	cert, err := certs[0].Certificate()
@@ -84,7 +84,7 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 	}
 
 	if len(pubKeys) < 1 {
-		return nil, fmt.Errorf("No public key object was found with label %s.", label)
+		return nil, fmt.Errorf("no public key object was found with label %s", label)
 	}
 
 	pubKey, err := pubKeys[0].PublicKey()
@@ -98,7 +98,7 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 	}
 
 	if len(privkeys) < 1 {
-		return nil, fmt.Errorf("No private key object was found with label %s.", label)
+		return nil, fmt.Errorf("no private key object was found with label %s", label)
 	}
 
 	privKey, err := privkeys[0].PrivateKey(pubKey)
@@ -144,8 +144,8 @@ func (k *Key) CertificateChain() [][]byte {
 
 // Close releases resources held by the credential.
 func (k *Key) Close() {
-	k.slot.Close()
-	k.module.Close()
+	_ = k.slot.Close()
+	_ = k.module.Close()
 }
 
 // Public returns the corresponding public key for this Key.
@@ -163,7 +163,7 @@ func (k *Key) Encrypt(plaintext []byte, opts any) ([]byte, error) {
 	if hash, ok := opts.(crypto.Hash); ok {
 		k.hash = hash
 	} else {
-		return nil, fmt.Errorf("Unsupported encrypt opts: %v", opts)
+		return nil, fmt.Errorf("unsupported encrypt opts: %v", opts)
 	}
 	publicKey := k.Public()
 	_, ok := publicKey.(*rsa.PublicKey)
@@ -183,7 +183,7 @@ func (k *Key) Decrypt(msg []byte, opts crypto.DecrypterOpts) ([]byte, error) {
 	if oaepOpts, ok := opts.(*rsa.OAEPOptions); ok {
 		k.hash = oaepOpts.Hash
 	} else {
-		return nil, fmt.Errorf("Unsupported DecrypterOpts: %v", opts)
+		return nil, fmt.Errorf("unsupported DecrypterOpts: %v", opts)
 	}
 	if k.decrypter == nil {
 		return nil, fmt.Errorf("decrypt error: Decrypter is nil")
