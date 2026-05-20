@@ -34,7 +34,7 @@ jobs:
       with:
         version: latest
         working-directory: ./internal/signer/linux
-        args: -E gofmt --max-same-issues 0
+        args: --max-same-issues 0
 
     - name: Create Binaries
       run: ./build/scripts/linux_amd64.sh

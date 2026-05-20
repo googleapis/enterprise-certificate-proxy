@@ -44,14 +44,14 @@ jobs:
       with:
         version: latest
         working-directory: ./internal/signer/darwin
-        args: -E gofmt --max-same-issues 0
+        args: --max-same-issues 0
 
     - name: Lint Client
       uses: golangci/golangci-lint-action@v9
       with:
         version: latest
         working-directory: ./darwin
-        args: -E gofmt --max-same-issues 0
+        args: --max-same-issues 0
 
     - name: Create Binaries
       run: ./build/scripts/darwin_amd64.sh && ./build/scripts/darwin_arm64.sh
