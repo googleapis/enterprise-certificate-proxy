@@ -15,6 +15,7 @@
 // +build darwin,cgo
 
 package keychain
+//nolint:govet
 
 import (
 	"bytes"
