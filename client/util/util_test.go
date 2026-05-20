@@ -14,7 +14,6 @@
 package util
 
 import (
-	"os"
 	"testing"
 )
 
@@ -53,7 +52,7 @@ func TestLoadSignerBinaryPathTilde(t *testing.T) {
 
 func TestGetConfigFilePathFromEnv(t *testing.T) {
 	want := "/testpath"
-	os.Setenv("GOOGLE_API_CERTIFICATE_CONFIG", want)
+	t.Setenv("GOOGLE_API_CERTIFICATE_CONFIG", want)
 	path := GetConfigFilePathFromEnv()
 	if path != want {
 		t.Errorf("Expected path is %q, got: %q", want, path)
