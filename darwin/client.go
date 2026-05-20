@@ -63,7 +63,7 @@ func (sk *SecureKey) Decrypt(_ io.Reader, msg []byte, opts crypto.DecrypterOpts)
 
 // Close frees up resources associated with the underlying key.
 func (sk *SecureKey) Close() {
-	sk.key.Close()
+	_ = sk.key.Close()
 }
 
 // NewSecureKey returns a handle to the first available certificate and private key pair in
