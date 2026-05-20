@@ -15,6 +15,7 @@
 // +build darwin,cgo
 
 // Package keychain contains functions for retrieving certificates from the Darwin Keychain.
+//nolint:govet
 package keychain
 
 /*
@@ -175,7 +176,7 @@ func newKey(privateKeyRef C.SecKeyRef, certs []*x509.Certificate, publicKeyRef C
 	C.CFRetain(C.CFTypeRef(privateKeyRef))
 	C.CFRetain(C.CFTypeRef(publicKeyRef))
 	runtime.SetFinalizer(k, func(x interface{}) {
-		x.(*Key).Close()
+		_ = x.(*Key).Close()
 	})
 	return k, nil
 }
@@ -666,7 +667,7 @@ func (k *Key) Encrypt(plaintext []byte, opts any) ([]byte, error) {
 	if hash, ok := opts.(crypto.Hash); ok {
 		k.hash = hash
 	} else {
-		return nil, fmt.Errorf("Unsupported encrypt opts: %v", opts)
+		return nil, fmt.Errorf("unsupported encrypt opts: %v", opts)
 	}
 	pub := k.publicKeyRef
 	algorithm, err := k.getEncryptAlgorithm()
@@ -694,7 +695,7 @@ func (k *Key) Decrypt(ciphertext []byte, opts crypto.DecrypterOpts) ([]byte, err
 	if oaepOpts, ok := opts.(*rsa.OAEPOptions); ok {
 		k.hash = oaepOpts.Hash
 	} else {
-		return nil, fmt.Errorf("Unsupported DecrypterOpts: %v", opts)
+		return nil, fmt.Errorf("unsupported DecrypterOpts: %v", opts)
 	}
 	priv := k.privateKeyRef
 	algorithm, err := k.getDecryptAlgorithm()
