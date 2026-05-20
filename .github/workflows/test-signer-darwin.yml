@@ -40,14 +40,14 @@ jobs:
       run: go test -v .
       
     - name: Lint Signer
-      uses: golangci/golangci-lint-action@v6
+      uses: golangci/golangci-lint-action@v9
       with:
         version: latest
         working-directory: ./internal/signer/darwin
         args: -E gofmt --max-same-issues 0
 
     - name: Lint Client
-      uses: golangci/golangci-lint-action@v6
+      uses: golangci/golangci-lint-action@v9
       with:
         version: latest
         working-directory: ./darwin
