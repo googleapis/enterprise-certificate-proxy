@@ -16,7 +16,7 @@
 
 // Cert_util provides helpers for working with Windows certificates via crypt32.dll
 
-package ncrypt //nolint:govet
+package ncrypt
 
 import (
 	"crypto"
