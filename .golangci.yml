@@ -1,0 +1,18 @@
+version: "2"
+
+formatters:
+  enable:
+    - gofmt
+
+linters:
+  exclusions:
+    rules:
+      - path: internal/signer/darwin/keychain/keychain\.go
+        linters:
+          - govet
+      - path: internal/signer/darwin/keychain/keychain_test\.go
+        linters:
+          - govet
+      - path: internal/signer/windows/ncrypt/cert_util\.go
+        linters:
+          - govet

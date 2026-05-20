@@ -27,11 +27,11 @@ jobs:
       run: go test -v ./...
       
     - name: Lint
-      uses: golangci/golangci-lint-action@v6
+      uses: golangci/golangci-lint-action@v9
       with:
         version: latest
         working-directory: ./internal/signer/windows
-        args: -E gofmt --max-same-issues 0
+        args: --max-same-issues 0
 
     - name: Create Binaries
       run: .\build\scripts\windows_amd64.ps1

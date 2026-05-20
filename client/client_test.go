@@ -20,7 +20,6 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"errors"
-	"os"
 	"testing"
 )
 
@@ -47,7 +46,7 @@ func TestClient_Cred_BinaryPathMissing(t *testing.T) {
 
 func TestClient_Cred_EnvOverride_ExplicitConfig(t *testing.T) {
 	configFilePath := "testdata/certificate_config.json"
-	os.Setenv("GOOGLE_API_CERTIFICATE_CONFIG", "testdata/certificate_config_missing_path.json")
+	t.Setenv("GOOGLE_API_CERTIFICATE_CONFIG", "testdata/certificate_config_missing_path.json")
 	_, err := Cred(configFilePath)
 	if err != nil {
 		t.Errorf("Cred: with explicit config and set env var; got %v, want %v err", err, nil)
@@ -56,7 +55,7 @@ func TestClient_Cred_EnvOverride_ExplicitConfig(t *testing.T) {
 
 func TestClient_Cred_EnvOverride_EmptyConfig(t *testing.T) {
 	configFilePath := ""
-	os.Setenv("GOOGLE_API_CERTIFICATE_CONFIG", "testdata/certificate_config_broken.json")
+	t.Setenv("GOOGLE_API_CERTIFICATE_CONFIG", "testdata/certificate_config_broken.json")
 	_, err := Cred(configFilePath)
 	var serr *json.SyntaxError
 	if got, want := err, &serr; !errors.As(got, want) {
@@ -134,7 +133,7 @@ func TestClient_Sign_HashSizeMismatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = key.Sign(nil, []byte("testDigest"), crypto.SHA256)
-	if got, want := err.Error(), "Digest length of 10 bytes does not match Hash function size of 32 bytes"; got != want {
+	if got, want := err.Error(), "digest length of 10 bytes does not match Hash function size of 32 bytes"; got != want {
 		t.Errorf("Sign: got err %v, want err %v", got, want)
 	}
 }

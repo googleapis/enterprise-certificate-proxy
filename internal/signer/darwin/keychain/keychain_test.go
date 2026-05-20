@@ -45,7 +45,9 @@ func TestKeychainError(t *testing.T) {
 func TestBytesToCFDataRoundTrip(t *testing.T) {
 	want := []byte("an arbitrary and yet coherent byte slice!")
 	d := bytesToCFData(want)
-	defer cfRelease(unsafe.Pointer(d))
+	defer func() {
+		cfRelease(unsafe.Pointer(d))
+	}()
 	if got := cfDataToBytes(d); !bytes.Equal(got, want) {
 		t.Errorf("bytesToCFData -> cfDataToBytes\ngot  %x\nwant %x", got, want)
 	}
