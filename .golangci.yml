@@ -4,14 +4,15 @@ formatters:
   enable:
     - gofmt
 
-issues:
-  exclude-rules:
-    - path: internal/signer/darwin/keychain/keychain\.go
-      linters:
-        - govet
-    - path: internal/signer/darwin/keychain/keychain_test\.go
-      linters:
-        - govet
-    - path: internal/signer/windows/ncrypt/cert_util\.go
-      linters:
-        - govet
+linters:
+  exclusions:
+    rules:
+      - path: internal/signer/darwin/keychain/keychain\.go
+        linters:
+          - govet
+      - path: internal/signer/darwin/keychain/keychain_test\.go
+        linters:
+          - govet
+      - path: internal/signer/windows/ncrypt/cert_util\.go
+        linters:
+          - govet
