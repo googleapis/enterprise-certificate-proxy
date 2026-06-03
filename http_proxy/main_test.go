@@ -234,6 +234,42 @@ func TestIsMtlsHost(t *testing.T) {
 			want:           false,
 		},
 		{
+			name:           "allowed TPC host compute.mtls.apis-tpczero.goog",
+			mtlsHostsRegex: mtlsGoogleapisHostRegex,
+			host:           "compute.mtls.apis-tpczero.goog",
+			want:           true,
+		},
+		{
+			name:           "allowed TPC host compute.apis-tpczero.goog",
+			mtlsHostsRegex: mtlsGoogleapisHostRegex,
+			host:           "compute.apis-tpczero.goog",
+			want:           true,
+		},
+		{
+			name:           "allowed TPC host sts.apis-tpczero.goog",
+			mtlsHostsRegex: mtlsGoogleapisHostRegex,
+			host:           "sts.apis-tpczero.goog",
+			want:           true,
+		},
+		{
+			name:           "allowed TPC host compute.tpczero.goog",
+			mtlsHostsRegex: mtlsGoogleapisHostRegex,
+			host:           "compute.tpczero.goog",
+			want:           true,
+		},
+		{
+			name:           "disallowed TPC host auth.cloud.tpczero.goog rejected",
+			mtlsHostsRegex: mtlsGoogleapisHostRegex,
+			host:           "auth.cloud.tpczero.goog",
+			want:           false,
+		},
+		{
+			name:           "disallowed TPC host tpczero.goog rejected",
+			mtlsHostsRegex: mtlsGoogleapisHostRegex,
+			host:           "tpczero.goog",
+			want:           false,
+		},
+		{
 			name:           "localhost regex rejects googleapis",
 			mtlsHostsRegex: localhostRegex,
 			host:           "storage.googleapis.com",
@@ -437,9 +473,9 @@ func TestRoutingTransport(t *testing.T) {
 	defaultRT := &mockRoundTripper{}
 
 	routingRT := &RoutingTransport{
-		ECPTransport:        ecpRT,
-		DefaultTransport:    defaultRT,
-		MtlsHostsRegex: mtlsGoogleapisHostRegex,
+		ECPTransport:     ecpRT,
+		DefaultTransport: defaultRT,
+		MtlsHostsRegex:   mtlsGoogleapisHostRegex,
 	}
 
 	tests := []struct {
@@ -457,6 +493,12 @@ func TestRoutingTransport(t *testing.T) {
 		{
 			name:        "Allowed API Host",
 			host:        "reauth.googleapis.com",
+			wantECP:     false,
+			wantDefault: true,
+		},
+		{
+			name:        "TPC mTLS Host",
+			host:        "sts.apis-tpczero.goog",
 			wantECP:     true,
 			wantDefault: false,
 		},
