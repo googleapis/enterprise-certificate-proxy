@@ -240,27 +240,15 @@ func TestIsMtlsHost(t *testing.T) {
 			want:           true,
 		},
 		{
-			name:           "allowed TPC host compute.apis-tpczero.goog",
+			name:           "allowed TPC host compute.mtls.tpczero.goog",
+			mtlsHostsRegex: mtlsGoogleapisHostRegex,
+			host:           "compute.mtls.tpczero.goog",
+			want:           true,
+		},
+		{
+			name:           "disallowed TPC host compute.apis-tpczero.goog rejected",
 			mtlsHostsRegex: mtlsGoogleapisHostRegex,
 			host:           "compute.apis-tpczero.goog",
-			want:           true,
-		},
-		{
-			name:           "allowed TPC host sts.apis-tpczero.goog",
-			mtlsHostsRegex: mtlsGoogleapisHostRegex,
-			host:           "sts.apis-tpczero.goog",
-			want:           true,
-		},
-		{
-			name:           "allowed TPC host compute.tpczero.goog",
-			mtlsHostsRegex: mtlsGoogleapisHostRegex,
-			host:           "compute.tpczero.goog",
-			want:           true,
-		},
-		{
-			name:           "disallowed TPC host auth.cloud.tpczero.goog rejected",
-			mtlsHostsRegex: mtlsGoogleapisHostRegex,
-			host:           "auth.cloud.tpczero.goog",
 			want:           false,
 		},
 		{
@@ -498,7 +486,7 @@ func TestRoutingTransport(t *testing.T) {
 		},
 		{
 			name:        "TPC mTLS Host",
-			host:        "sts.apis-tpczero.goog",
+			host:        "sts.mtls.apis-tpczero.goog",
 			wantECP:     true,
 			wantDefault: false,
 		},
