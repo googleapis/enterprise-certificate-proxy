@@ -35,7 +35,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"regexp"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -179,11 +179,11 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 	passthroughProxyServer := httptest.NewServer(http.HandlerFunc(ProxyHandler))
 	defer passthroughProxyServer.Close()
 
-	validMTLSBackendServerHost := validMTLSBackendServer.Listener.Addr().String()       // e.g. "127.0.0.1:12345"
-	backendServerReturnsErrorHost := backendServerReturnsError.Listener.Addr().String() // e.g. "127.0.0.1:12345"
+	validMTLSBackendServerHost := strings.Replace(validMTLSBackendServer.Listener.Addr().String(), "127.0.0.1", "mtls.test", 1)
+	backendServerReturnsErrorHost := strings.Replace(backendServerReturnsError.Listener.Addr().String(), "127.0.0.1", "mtls.test", 1)
 	plainBackendServerHost := plainBackendServer.Listener.Addr().String()
 	validPassthroughURL := passthroughProxyServer.URL
-	invalidPassthroughURL := "1234-bad-server.com"
+	invalidPassthroughURL := "1234-bad-server-mtls.com"
 
 	testCases := []struct {
 		name                    string
@@ -215,7 +215,7 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 		{
 			name:                    "invalid target header (dns failure)",
 			ecpMTLSCerts:            certs1,
-			targetHostHeader:        "123-not-allowed.com",
+			targetHostHeader:        "123-not-allowed-mtls.com",
 			passthroughProxyAddress: "",
 			wantStatusCode:          http.StatusBadGateway,
 			wantECPProxyError:       true,
@@ -310,7 +310,6 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 
 			proxyConfig := &ProxyConfig{
 				Port:                  ecpProxyPort,
-				AllowedMtlsHostsRegex: regexp.MustCompile(".*"),
 				TlsConfig:             tlsConfig,
 			}
 
@@ -322,19 +321,28 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 				proxyConfig.UpstreamProxyURL = passthroughProxyServerURL
 			}
 
-			ecpTransport := newTransport(proxyConfig.TlsConfig, proxyConfig)
-			
+			ecpTransport := newTransport(proxyConfig.TlsConfig, proxyConfig).(*http.Transport)
+
 			defaultTLSConfig := &tls.Config{
 				RootCAs:            tc.ecpMTLSCerts.CAPool,
 				InsecureSkipVerify: true,
 				ServerName:         "localhost",
 			}
-			defaultTransport := newTransport(defaultTLSConfig, proxyConfig)
+			defaultTransport := newTransport(defaultTLSConfig, proxyConfig).(*http.Transport)
+
+			customDialContext := func(ctx context.Context, network, addr string) (net.Conn, error) {
+				addr = strings.Replace(addr, "mtls.test", "127.0.0.1", 1)
+				return (&net.Dialer{
+					Timeout:   proxyConfig.DialTimeout,
+					KeepAlive: proxyConfig.KeepAlivePeriod,
+				}).DialContext(ctx, network, addr)
+			}
+			ecpTransport.DialContext = customDialContext
+			defaultTransport.DialContext = customDialContext
 
 			routingTransport := &RoutingTransport{
 				ECPTransport:     ecpTransport,
 				DefaultTransport: defaultTransport,
-				MtlsHostsRegex:   proxyConfig.AllowedMtlsHostsRegex,
 			}
 
 			handler := newECPProxyHandler(routingTransport)

@@ -34,7 +34,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"regexp"
+	"strings"
 	"syscall"
 	"time"
 
@@ -60,10 +60,6 @@ const (
 	defaultShutdownTimeout     = 5 * time.Second
 )
 
-// mtlsGoogleapisHostRegex is a regular expression that validates whether a target
-// host conforms to the "*.mtls.googleapis.com" and "*.mtls.sandbox.googleapis.com" pattern. This is a security
-// measure to ensure the ECPProxy only connects to allowed endpoints.
-var mtlsGoogleapisHostRegex = regexp.MustCompile(`^[a-z0-9-]+(\.mtls|\.mtls\.sandbox)\.googleapis\.com$`)
 
 // AppConfig holds the application configuration parsed from command-line flags.
 type AppConfig struct {
@@ -113,7 +109,6 @@ func newAppConfigFromFlags() (*AppConfig, error) {
 // ProxyConfig holds the configuration for the ECPPProxy server.
 type ProxyConfig struct {
 	Port                   int            // The port for the ECPPProxy server to listen on.
-	AllowedMtlsHostsRegex  *regexp.Regexp // Regex to validate allowed mTLS hosts.
 	TlsConfig              *tls.Config    // TLS configuration for mTLS.
 	UpstreamProxyURL       *url.URL       // Optional upstream proxy URL. This will configure the ECPPProxy transport to use this proxy.
 	TLSHandshakeTimeout    time.Duration  // Max duration for TLS handshake to the target.
@@ -163,12 +158,6 @@ func writeError(w http.ResponseWriter, originalError error, errorMsg string, sta
 	}
 }
 
-// isMtlsHost checks if the provided host string matches the predefined
-// regular expression for allowed mTLS hosts.
-func isMtlsHost(mtlsHostsRegex *regexp.Regexp, host string) bool {
-	return mtlsHostsRegex.MatchString(host)
-}
-
 // newTransport creates an http.RoundTripper configured with the given TLS config
 // and optional upstream proxy.
 func newTransport(tlsConfig *tls.Config, proxyConfig *ProxyConfig) http.RoundTripper {
@@ -197,16 +186,16 @@ func newTransport(tlsConfig *tls.Config, proxyConfig *ProxyConfig) http.RoundTri
 type RoutingTransport struct {
 	ECPTransport     http.RoundTripper
 	DefaultTransport http.RoundTripper
-	MtlsHostsRegex   *regexp.Regexp
 }
 
 // RoundTrip executes a single HTTP transaction, routing it to the appropriate transport.
 func (t *RoutingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	if isMtlsHost(t.MtlsHostsRegex, req.URL.Host) {
+	if strings.Contains(req.URL.Host, "mtls") {
 		return t.ECPTransport.RoundTrip(req)
 	}
 	return t.DefaultTransport.RoundTrip(req)
 }
+
 
 // newECPProxyHandler creates the primary http.Handler for the ECP Proxy server.
 // It uses httputil.ReverseProxy to forward requests.
@@ -310,7 +299,6 @@ func run(ctx context.Context, cfg *AppConfig) error {
 	log.Print("Starting ECP Proxy...")
 
 	proxyConfig := newDefaultProxyConfig()
-	proxyConfig.AllowedMtlsHostsRegex = mtlsGoogleapisHostRegex
 	proxyConfig.Port = cfg.Port
 
 	// Create tlsConfig
@@ -350,7 +338,6 @@ func run(ctx context.Context, cfg *AppConfig) error {
 	routingTransport := &RoutingTransport{
 		ECPTransport:     ecpTransport,
 		DefaultTransport: defaultTransport,
-		MtlsHostsRegex:   proxyConfig.AllowedMtlsHostsRegex,
 	}
 
 	// Create a ServeMux to route requests.

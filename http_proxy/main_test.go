@@ -26,7 +26,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
-	"regexp"
 	"testing"
 )
 
@@ -36,7 +35,6 @@ const (
 
 var (
 	testPath       = fmt.Sprintf("http://localhost:%d/some/path", testPort)
-	localhostRegex = regexp.MustCompile(`^127\.0\.0\.1:(\d{1,5})$`)
 )
 
 func TestAppConfigFromFlags(t *testing.T) {
@@ -148,114 +146,6 @@ func TestAppConfigFromFlags(t *testing.T) {
 	}
 }
 
-func TestIsMtlsHost(t *testing.T) {
-	tests := []struct {
-		name           string
-		mtlsHostsRegex *regexp.Regexp
-		host           string
-		want           bool
-	}{
-		{
-			name:           "allowed host storage.mtls.googleapis.com",
-			mtlsHostsRegex: mtlsGoogleapisHostRegex,
-			host:           "storage.mtls.googleapis.com",
-			want:           true,
-		},
-		{
-			name:           "allowed host storage.mtls.sandbox.googleapis.com",
-			mtlsHostsRegex: mtlsGoogleapisHostRegex,
-			host:           "storage.mtls.sandbox.googleapis.com",
-			want:           true,
-		},
-		{
-			name:           "allowed host with numbers",
-			mtlsHostsRegex: mtlsGoogleapisHostRegex,
-			host:           "my-service-123.mtls.googleapis.com",
-			want:           true,
-		},
-		{
-			name:           "disallowed host google.com rejected",
-			mtlsHostsRegex: mtlsGoogleapisHostRegex,
-			host:           "google.com",
-			want:           false,
-		},
-		{
-			name:           "disallowed host evil.com rejected",
-			mtlsHostsRegex: mtlsGoogleapisHostRegex,
-			host:           "evil.com",
-			want:           false,
-		},
-		{
-			name:           "disallowed host with fake subdomain rejected",
-			mtlsHostsRegex: mtlsGoogleapisHostRegex,
-			host:           "storage.mtls.googleapis.com.fake.com",
-			want:           false,
-		},
-		{
-			name:           "disallowed host with fake prefix rejected",
-			mtlsHostsRegex: mtlsGoogleapisHostRegex,
-			host:           "a/b/c/storage.mtls.googleapis.com.",
-			want:           false,
-		},
-		{
-			name:           "allowed host with numbers",
-			mtlsHostsRegex: mtlsGoogleapisHostRegex,
-			host:           "my-service-123.mtls.sandbox.googleapis.com",
-			want:           true,
-		},
-		{
-			name:           "disallowed host sandbox.google.com rejected",
-			mtlsHostsRegex: mtlsGoogleapisHostRegex,
-			host:           "sandbox.google.com",
-			want:           false,
-		},
-		{
-			name:           "disallowed host sandbox.evil.com rejected",
-			mtlsHostsRegex: mtlsGoogleapisHostRegex,
-			host:           "sandbox.evil.com",
-			want:           false,
-		},
-		{
-			name:           "disallowed host with fake subdomain rejected",
-			mtlsHostsRegex: mtlsGoogleapisHostRegex,
-			host:           "storage.mtls.sandbox.googleapis.com.fake.com",
-			want:           false,
-		},
-		{
-			name:           "disallowed host with fake prefix rejected",
-			mtlsHostsRegex: mtlsGoogleapisHostRegex,
-			host:           "a/b/c/storage.mtls.sandbox.googleapis.com.",
-			want:           false,
-		},
-		{
-			name:           "disallowed host - empty string",
-			mtlsHostsRegex: mtlsGoogleapisHostRegex,
-			host:           "",
-			want:           false,
-		},
-		{
-			name:           "localhost regex rejects googleapis",
-			mtlsHostsRegex: localhostRegex,
-			host:           "storage.googleapis.com",
-			want:           false,
-		},
-		{
-			name:           "localhost regex allows localhost",
-			mtlsHostsRegex: localhostRegex,
-			host:           "127.0.0.1:8080",
-			want:           true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := isMtlsHost(tt.mtlsHostsRegex, tt.host); got != tt.want {
-				t.Errorf("isMtlsHost(%s, %q) = %v, want %v", tt.mtlsHostsRegex.String(), tt.host, got, tt.want)
-			}
-		})
-	}
-}
-
 func TestWriteError(t *testing.T) {
 	rr := httptest.NewRecorder()
 	originalErr := errors.New("original error")
@@ -324,7 +214,6 @@ func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 func NewProxyConfigForTest() *ProxyConfig {
 	proxyConfig := newDefaultProxyConfig()
 	proxyConfig.Port = testPort
-	proxyConfig.AllowedMtlsHostsRegex = mtlsGoogleapisHostRegex
 	return proxyConfig
 }
 
@@ -426,79 +315,6 @@ func TestNewECPProxyHandler(t *testing.T) {
 				}
 				if errResp.Error == "" {
 					t.Errorf("Expected error response 'Error' field to be non-empty")
-				}
-			}
-		})
-	}
-}
-
-func TestRoutingTransport(t *testing.T) {
-	ecpRT := &mockRoundTripper{}
-	defaultRT := &mockRoundTripper{}
-
-	routingRT := &RoutingTransport{
-		ECPTransport:        ecpRT,
-		DefaultTransport:    defaultRT,
-		MtlsHostsRegex: mtlsGoogleapisHostRegex,
-	}
-
-	tests := []struct {
-		name        string
-		host        string
-		wantECP     bool
-		wantDefault bool
-	}{
-		{
-			name:        "mTLS Host",
-			host:        "storage.mtls.googleapis.com",
-			wantECP:     true,
-			wantDefault: false,
-		},
-		{
-			name:        "Allowed API Host",
-			host:        "reauth.googleapis.com",
-			wantECP:     true,
-			wantDefault: false,
-		},
-		{
-			name:        "Regular Host",
-			host:        "google.com",
-			wantECP:     false,
-			wantDefault: true,
-		},
-		{
-			name:        "Disallowed mTLS-like Host",
-			host:        "evil.mtls.googleapis.com.fake.com",
-			wantECP:     false,
-			wantDefault: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Reset mocks
-			ecpRT.capturedRequest = nil
-			defaultRT.capturedRequest = nil
-
-			req := httptest.NewRequest(http.MethodGet, "https://"+tt.host, nil)
-			_, err := routingRT.RoundTrip(req)
-			if err != nil {
-				t.Fatalf("RoundTrip failed: %v", err)
-			}
-
-			if tt.wantECP {
-				if ecpRT.capturedRequest == nil {
-					t.Error("Expected ECP transport to be used, but it wasn't")
-				}
-				if defaultRT.capturedRequest != nil {
-					t.Error("Expected Default transport NOT to be used, but it was")
-				}
-			} else if tt.wantDefault {
-				if defaultRT.capturedRequest == nil {
-					t.Error("Expected Default transport to be used, but it wasn't")
-				}
-				if ecpRT.capturedRequest != nil {
-					t.Error("Expected ECP transport NOT to be used, but it was")
 				}
 			}
 		})
@@ -643,4 +459,70 @@ func TestMuxRouting(t *testing.T) {
 			t.Errorf("Expected path %q, got %q", "/some/path", mockRT.capturedRequest.URL.Path)
 		}
 	})
+}
+
+func TestRoutingTransport(t *testing.T) {
+	ecpRT := &mockRoundTripper{}
+	defaultRT := &mockRoundTripper{}
+
+	routingRT := &RoutingTransport{
+		ECPTransport:        ecpRT,
+		DefaultTransport:    defaultRT,
+	}
+
+	tests := []struct {
+		name        string
+		host        string
+		wantECP     bool
+		wantDefault bool
+	}{
+		{
+			name:        "mTLS Host",
+			host:        "storage.mtls.googleapis.com",
+			wantECP:     true,
+			wantDefault: false,
+		},
+		{
+			name:        "Regular Host",
+			host:        "google.com",
+			wantECP:     false,
+			wantDefault: true,
+		},
+		{
+			name:        "Host with mtls",
+			host:        "mtls.example.com",
+			wantECP:     true,
+			wantDefault: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset mocks
+			ecpRT.capturedRequest = nil
+			defaultRT.capturedRequest = nil
+
+			req := httptest.NewRequest(http.MethodGet, "https://"+tt.host, nil)
+			_, err := routingRT.RoundTrip(req)
+			if err != nil {
+				t.Fatalf("RoundTrip failed: %v", err)
+			}
+
+			if tt.wantECP {
+				if ecpRT.capturedRequest == nil {
+					t.Error("Expected ECP transport to be used, but it wasn't")
+				}
+				if defaultRT.capturedRequest != nil {
+					t.Error("Expected Default transport NOT to be used, but it was")
+				}
+			} else if tt.wantDefault {
+				if defaultRT.capturedRequest == nil {
+					t.Error("Expected Default transport to be used, but it wasn't")
+				}
+				if ecpRT.capturedRequest != nil {
+					t.Error("Expected ECP transport NOT to be used, but it was")
+				}
+			}
+		})
+	}
 }
