@@ -179,6 +179,8 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 	passthroughProxyServer := httptest.NewServer(http.HandlerFunc(ProxyHandler))
 	defer passthroughProxyServer.Close()
 
+	// To trick the proxy into selecting the ECPTransport (mTLS), the target host must contain ".mtls.".
+	// We replace the local IP (127.0.0.1) from our mock servers with "test.mtls.local" in the request headers.
 	validMTLSBackendServerHost := strings.Replace(validMTLSBackendServer.Listener.Addr().String(), "127.0.0.1", "test.mtls.local", 1)
 	backendServerReturnsErrorHost := strings.Replace(backendServerReturnsError.Listener.Addr().String(), "127.0.0.1", "test.mtls.local", 1)
 	plainBackendServerHost := plainBackendServer.Listener.Addr().String()
@@ -330,6 +332,9 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 			}
 			defaultTransport := newTransport(defaultTLSConfig, proxyConfig).(*http.Transport)
 
+			// Because we tricked the proxy with the fake domain "test.mtls.local" above to trigger mTLS,
+			// the actual TCP dial will fail DNS resolution. We use a custom DialContext to intercept this
+			// fake domain and redirect the connection back to 127.0.0.1 where the mock server is listening.
 			customDialContext := func(ctx context.Context, network, addr string) (net.Conn, error) {
 				addr = strings.Replace(addr, "test.mtls.local", "127.0.0.1", 1)
 				return (&net.Dialer{

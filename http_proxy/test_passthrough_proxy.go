@@ -87,7 +87,9 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 
 // handleTunneling handles CONNECT requests for setting up an HTTPS tunnel.
 func handleTunneling(w http.ResponseWriter, r *http.Request) {
-	// Establish a TCP connection to the target host
+	// Establish a TCP connection to the target host.
+	// Note: We intercept the fake "test.mtls.local" domain (used by the proxy tests to force mTLS routing)
+	// and rewrite it to 127.0.0.1 so this dummy proxy can successfully dial the local mock server.
 	host := strings.Replace(r.Host, "test.mtls.local", "127.0.0.1", 1)
 	destConn, err := net.DialTimeout("tcp", host, 10*time.Second)
 	if err != nil {
