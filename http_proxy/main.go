@@ -190,7 +190,7 @@ type RoutingTransport struct {
 
 // RoundTrip executes a single HTTP transaction, routing it to the appropriate transport.
 func (t *RoutingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	if strings.Contains(req.URL.Host, "mtls") {
+	if strings.Contains(req.URL.Host, ".mtls.") {
 		return t.ECPTransport.RoundTrip(req)
 	}
 	return t.DefaultTransport.RoundTrip(req)

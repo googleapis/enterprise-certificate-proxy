@@ -490,7 +490,7 @@ func TestRoutingTransport(t *testing.T) {
 		},
 		{
 			name:        "Host with mtls",
-			host:        "mtls.example.com",
+			host:        "example.mtls.com",
 			wantECP:     true,
 			wantDefault: false,
 		},

@@ -88,7 +88,7 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 // handleTunneling handles CONNECT requests for setting up an HTTPS tunnel.
 func handleTunneling(w http.ResponseWriter, r *http.Request) {
 	// Establish a TCP connection to the target host
-	host := strings.Replace(r.Host, "mtls.test", "127.0.0.1", 1)
+	host := strings.Replace(r.Host, "test.mtls.local", "127.0.0.1", 1)
 	destConn, err := net.DialTimeout("tcp", host, 10*time.Second)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)

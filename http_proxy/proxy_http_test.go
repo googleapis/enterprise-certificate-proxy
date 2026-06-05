@@ -179,8 +179,8 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 	passthroughProxyServer := httptest.NewServer(http.HandlerFunc(ProxyHandler))
 	defer passthroughProxyServer.Close()
 
-	validMTLSBackendServerHost := strings.Replace(validMTLSBackendServer.Listener.Addr().String(), "127.0.0.1", "mtls.test", 1)
-	backendServerReturnsErrorHost := strings.Replace(backendServerReturnsError.Listener.Addr().String(), "127.0.0.1", "mtls.test", 1)
+	validMTLSBackendServerHost := strings.Replace(validMTLSBackendServer.Listener.Addr().String(), "127.0.0.1", "test.mtls.local", 1)
+	backendServerReturnsErrorHost := strings.Replace(backendServerReturnsError.Listener.Addr().String(), "127.0.0.1", "test.mtls.local", 1)
 	plainBackendServerHost := plainBackendServer.Listener.Addr().String()
 	validPassthroughURL := passthroughProxyServer.URL
 	invalidPassthroughURL := "1234-bad-server-mtls.com"
@@ -331,7 +331,7 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 			defaultTransport := newTransport(defaultTLSConfig, proxyConfig).(*http.Transport)
 
 			customDialContext := func(ctx context.Context, network, addr string) (net.Conn, error) {
-				addr = strings.Replace(addr, "mtls.test", "127.0.0.1", 1)
+				addr = strings.Replace(addr, "test.mtls.local", "127.0.0.1", 1)
 				return (&net.Dialer{
 					Timeout:   proxyConfig.DialTimeout,
 					KeepAlive: proxyConfig.KeepAlivePeriod,
