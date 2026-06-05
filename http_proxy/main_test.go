@@ -34,7 +34,7 @@ const (
 )
 
 var (
-	testPath       = fmt.Sprintf("http://localhost:%d/some/path", testPort)
+	testPath = fmt.Sprintf("http://localhost:%d/some/path", testPort)
 )
 
 func TestAppConfigFromFlags(t *testing.T) {
@@ -466,8 +466,8 @@ func TestRoutingTransport(t *testing.T) {
 	defaultRT := &mockRoundTripper{}
 
 	routingRT := &RoutingTransport{
-		ECPTransport:        ecpRT,
-		DefaultTransport:    defaultRT,
+		ECPTransport:     ecpRT,
+		DefaultTransport: defaultRT,
 	}
 
 	tests := []struct {

@@ -311,8 +311,8 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 			}
 
 			proxyConfig := &ProxyConfig{
-				Port:                  ecpProxyPort,
-				TlsConfig:             tlsConfig,
+				Port:      ecpProxyPort,
+				TlsConfig: tlsConfig,
 			}
 
 			if tc.passthroughProxyAddress != "" {

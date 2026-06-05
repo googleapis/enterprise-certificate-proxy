@@ -60,7 +60,6 @@ const (
 	defaultShutdownTimeout     = 5 * time.Second
 )
 
-
 // AppConfig holds the application configuration parsed from command-line flags.
 type AppConfig struct {
 	Port                             int
@@ -108,15 +107,15 @@ func newAppConfigFromFlags() (*AppConfig, error) {
 
 // ProxyConfig holds the configuration for the ECPPProxy server.
 type ProxyConfig struct {
-	Port                   int            // The port for the ECPPProxy server to listen on.
-	TlsConfig              *tls.Config    // TLS configuration for mTLS.
-	UpstreamProxyURL       *url.URL       // Optional upstream proxy URL. This will configure the ECPPProxy transport to use this proxy.
-	TLSHandshakeTimeout    time.Duration  // Max duration for TLS handshake to the target.
-	ProxyRequestTimeout    time.Duration  // Max duration for the entire proxy request.
-	DialTimeout            time.Duration  // Max duration for establishing a TCP connection.
-	KeepAlivePeriod        time.Duration  // Period for TCP keep-alives.
-	IdleConnTimeout        time.Duration  // Max duration an idle connection is kept alive.
-	ShutdownTimeout        time.Duration  // Max duration to wait for graceful shutdown.
+	Port                int           // The port for the ECPPProxy server to listen on.
+	TlsConfig           *tls.Config   // TLS configuration for mTLS.
+	UpstreamProxyURL    *url.URL      // Optional upstream proxy URL. This will configure the ECPPProxy transport to use this proxy.
+	TLSHandshakeTimeout time.Duration // Max duration for TLS handshake to the target.
+	ProxyRequestTimeout time.Duration // Max duration for the entire proxy request.
+	DialTimeout         time.Duration // Max duration for establishing a TCP connection.
+	KeepAlivePeriod     time.Duration // Period for TCP keep-alives.
+	IdleConnTimeout     time.Duration // Max duration an idle connection is kept alive.
+	ShutdownTimeout     time.Duration // Max duration to wait for graceful shutdown.
 }
 
 // newDefaultProxyConfig creates a new ProxyConfig with default values for timeouts.
@@ -196,7 +195,6 @@ func (t *RoutingTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	return t.DefaultTransport.RoundTrip(req)
 }
 
-
 // newECPProxyHandler creates the primary http.Handler for the ECP Proxy server.
 // It uses httputil.ReverseProxy to forward requests.
 func newECPProxyHandler(transport http.RoundTripper) http.Handler {
@@ -260,8 +258,8 @@ func newReadyzHandler(nonceToken string) http.Handler {
 func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handler) error {
 	enableECPLogging()
 	server := &http.Server{
-		Addr:     fmt.Sprintf(":%d", proxyConfig.Port),
-		Handler:  handler,
+		Addr:    fmt.Sprintf(":%d", proxyConfig.Port),
+		Handler: handler,
 	}
 
 	// Channel to receive errors from the server's ListenAndServe goroutine.
