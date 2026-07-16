@@ -182,6 +182,7 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 	// To trick the proxy into selecting the ECPTransport (mTLS), the target host must contain ".mtls.".
 	// We replace the local IP (127.0.0.1) from our mock servers with "test.mtls.local" in the request headers.
 	validMTLSBackendServerHost := strings.Replace(validMTLSBackendServer.Listener.Addr().String(), "127.0.0.1", "test.mtls.local", 1)
+	mtlsValidMTLSBackendServerHost := strings.Replace(validMTLSBackendServer.Listener.Addr().String(), "127.0.0.1", "mtls.test.local", 1)
 	backendServerReturnsErrorHost := strings.Replace(backendServerReturnsError.Listener.Addr().String(), "127.0.0.1", "test.mtls.local", 1)
 	plainBackendServerHost := plainBackendServer.Listener.Addr().String()
 	validPassthroughURL := passthroughProxyServer.URL
@@ -196,6 +197,15 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 		expectedResponseBody    string
 		wantECPProxyError       bool
 	}{
+		{
+			name:                    "successful request with mtls. prefix",
+			ecpMTLSCerts:            certs1,
+			targetHostHeader:        mtlsValidMTLSBackendServerHost,
+			passthroughProxyAddress: "",
+			wantStatusCode:          http.StatusOK,
+			expectedResponseBody:    successMessage,
+			wantECPProxyError:       false,
+		},
 		{
 			name:                    "successful request",
 			ecpMTLSCerts:            certs1,
@@ -299,9 +309,9 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ecpProxyPort := 8080
+			ecpProxyPort := 8080 + i
 
 			tlsConfig := &tls.Config{
 				Certificates:       []tls.Certificate{tc.ecpMTLSCerts.ClientCert},
@@ -337,6 +347,7 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 			// fake domain and redirect the connection back to 127.0.0.1 where the mock server is listening.
 			customDialContext := func(ctx context.Context, network, addr string) (net.Conn, error) {
 				addr = strings.Replace(addr, "test.mtls.local", "127.0.0.1", 1)
+				addr = strings.Replace(addr, "mtls.test.local", "127.0.0.1", 1)
 				return (&net.Dialer{
 					Timeout:   proxyConfig.DialTimeout,
 					KeepAlive: proxyConfig.KeepAlivePeriod,
