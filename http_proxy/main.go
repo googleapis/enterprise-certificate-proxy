@@ -189,7 +189,10 @@ type RoutingTransport struct {
 
 // RoundTrip executes a single HTTP transaction, routing it to the appropriate transport.
 func (t *RoutingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	if strings.Contains(req.URL.Host, ".mtls.") {
+	// Route to ECP transport (mTLS) if the host is an mTLS endpoint.
+	// - Contains ".mtls." matches standard Google API mTLS hosts (e.g., compute.mtls.googleapis.com).
+	// - Starts with "mtls." matches IAP tunnel WebSocket hosts (e.g., mtls.tunnel.cloudproxy.app).
+	if strings.Contains(req.URL.Host, ".mtls.") || strings.HasPrefix(req.URL.Host, "mtls.") {
 		return t.ECPTransport.RoundTrip(req)
 	}
 	return t.DefaultTransport.RoundTrip(req)

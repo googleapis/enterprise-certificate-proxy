@@ -494,6 +494,12 @@ func TestRoutingTransport(t *testing.T) {
 			wantECP:     true,
 			wantDefault: false,
 		},
+		{
+			name:        "Host starting with mtls (WebSocket)",
+			host:        "mtls.tunnel.cloudproxy.app",
+			wantECP:     true,
+			wantDefault: false,
+		},
 	}
 
 	for _, tt := range tests {
