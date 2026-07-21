@@ -27,6 +27,7 @@ import (
 	"log"
 	"net/rpc"
 	"os"
+	"runtime/debug"
 	"time"
 
 	"github.com/googleapis/enterprise-certificate-proxy/internal/signer/linux/pkcs11"
@@ -123,6 +124,7 @@ func (k *EnterpriseCertSigner) Decrypt(args DecryptArgs, resp *[]byte) (err erro
 }
 
 func main() {
+	debug.SetMaxThreads(50)
 	enableECPLogging()
 	if len(os.Args) != 2 {
 		log.Fatalln("Signer is not meant to be invoked manually, exiting...")
