@@ -29,8 +29,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
-	"syscall"
 
 	"github.com/google/go-pkcs11/pkcs11"
 )
@@ -154,19 +152,10 @@ func (k *Key) Public() crypto.PublicKey {
 	return k.signer.Public()
 }
 
-var activeSignCalls int32
-
 // Sign signs a message.
 func (k *Key) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
-
-	current := atomic.AddInt32(&activeSignCalls, 1)
-	defer atomic.AddInt32(&activeSignCalls, -1)
-	if current > 1 {
-		// Hang this thread permanently to simulate PKCS11 deadlock and force thread spawning
-		_ = syscall.Pause()
-	}
 	return k.signer.Sign(nil, digest, opts)
 }
 
