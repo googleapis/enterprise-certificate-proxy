@@ -113,7 +113,6 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 		return nil, errors.New("PrivateKey does not implement crypto.Signer")
 	}
 	kdecrypter, _ := privKey.(crypto.Decrypter)
-	defaultHash := crypto.SHA256
 	return &Key{
 		slot:      kslot,
 		signer:    ksigner,
@@ -121,7 +120,6 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 		privKey:   privKey,
 		label:     label,
 		module:    *module,
-		hash:      defaultHash,
 		decrypter: kdecrypter,
 	}, nil
 }
@@ -135,7 +133,6 @@ type Key struct {
 	privKey   crypto.PrivateKey
 	label     string
 	module    pkcs11.Module
-	hash      crypto.Hash
 	decrypter crypto.Decrypter
 	mu        sync.Mutex
 }
@@ -161,6 +158,9 @@ var activeSignCalls int32
 
 // Sign signs a message.
 func (k *Key) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+
 	current := atomic.AddInt32(&activeSignCalls, 1)
 	defer atomic.AddInt32(&activeSignCalls, -1)
 	if current > 1 {
@@ -172,15 +172,16 @@ func (k *Key) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, 
 
 // Encrypt encrypts a plaintext message digest using the public key. Here, we use standard golang API.
 func (k *Key) Encrypt(plaintext []byte, opts any) ([]byte, error) {
-	if hash, ok := opts.(crypto.Hash); ok {
-		k.hash = hash
+	var hash crypto.Hash
+	if h, ok := opts.(crypto.Hash); ok {
+		hash = h
 	} else {
 		return nil, fmt.Errorf("unsupported encrypt opts: %v", opts)
 	}
 	publicKey := k.Public()
 	_, ok := publicKey.(*rsa.PublicKey)
 	if ok {
-		return k.encryptRSA(plaintext)
+		return k.encryptRSA(plaintext, hash)
 	}
 	_, ok = publicKey.(*ecdsa.PublicKey)
 	if ok {
@@ -192,8 +193,12 @@ func (k *Key) Encrypt(plaintext []byte, opts any) ([]byte, error) {
 
 // Decrypt decrypts a ciphertext message digest using the private key. Here, we pass off the decryption to pkcs11 library.
 func (k *Key) Decrypt(msg []byte, opts crypto.DecrypterOpts) ([]byte, error) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+
+	var hash crypto.Hash
 	if oaepOpts, ok := opts.(*rsa.OAEPOptions); ok {
-		k.hash = oaepOpts.Hash
+		hash = oaepOpts.Hash
 	} else {
 		return nil, fmt.Errorf("unsupported DecrypterOpts: %v", opts)
 	}
@@ -203,7 +208,7 @@ func (k *Key) Decrypt(msg []byte, opts crypto.DecrypterOpts) ([]byte, error) {
 	publicKey := k.Public()
 	_, ok := publicKey.(*rsa.PublicKey)
 	if ok {
-		return k.decryptRSAWithPKCS11(msg)
+		return k.decryptRSAWithPKCS11(msg, hash)
 	}
 	_, ok = publicKey.(*ecdsa.PublicKey)
 	if ok {
@@ -213,18 +218,18 @@ func (k *Key) Decrypt(msg []byte, opts crypto.DecrypterOpts) ([]byte, error) {
 	return nil, errors.New("decrypt error: Unsupported key type")
 }
 
-func (k *Key) encryptRSA(data []byte) ([]byte, error) {
+func (k *Key) encryptRSA(data []byte, hash crypto.Hash) ([]byte, error) {
 	publicKey := k.Public()
 	rsaPubKey := publicKey.(*rsa.PublicKey)
-	hash, err := cryptoHashToHash(k.hash)
+	h, err := cryptoHashToHash(hash)
 	if err != nil {
 		return nil, err
 	}
-	return rsa.EncryptOAEP(hash, rand.Reader, rsaPubKey, data, nil)
+	return rsa.EncryptOAEP(h, rand.Reader, rsaPubKey, data, nil)
 }
 
-func (k *Key) decryptRSAWithPKCS11(encryptedData []byte) ([]byte, error) {
-	opts := &rsa.OAEPOptions{Hash: k.hash}
+func (k *Key) decryptRSAWithPKCS11(encryptedData []byte, hash crypto.Hash) ([]byte, error) {
+	opts := &rsa.OAEPOptions{Hash: hash}
 	return k.decrypter.Decrypt(nil, encryptedData, opts)
 }
 

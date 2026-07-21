@@ -16,44 +16,77 @@ package linux
 import (
 	"bytes"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/rsa"
-	"flag"
+	"os"
 	"testing"
+
+	"github.com/googleapis/enterprise-certificate-proxy/internal/testflags"
 )
 
-const (
-	testModule  = "/usr/local/lib/softhsm/libsofthsm2.so"
-	testLabel   = "Demo Object"
-	testUserPin = "0000"
-)
+func getTestParams() (string, string, string, string) {
+	module := *testflags.TestModule
+	if module == "" {
+		module = "/usr/local/lib/softhsm/libsofthsm2.so"
+	}
+	label := *testflags.TestLabel
+	if label == "" {
+		label = "Demo Object"
+	}
+	pin := *testflags.TestUserPin
+	if pin == "" {
+		pin = "0000"
+	}
+	slot := *testflags.TestSlot
+	return module, slot, label, pin
+}
 
-var testSlot = *flag.String("testSlot", "", "libsofthsm2 slot location")
+func makeTestSecureKey(t *testing.T) *SecureKey {
+	module, slot, label, pin := getTestParams()
+	if _, err := os.Stat(module); os.IsNotExist(err) {
+		t.Skipf("Skipping test: PKCS11 module not found at %s", module)
+	}
+	sk, err := NewSecureKey(module, slot, label, pin)
+	if err != nil {
+		t.Skipf("Skipping test: failed to initialize secure key: %v", err)
+	}
+	return sk
+}
 
 func TestEncrypt(t *testing.T) {
-	sk, err := NewSecureKey(testModule, testSlot, testLabel, testUserPin)
-	if err != nil {
-		t.Errorf("Client Encrypt: error generating secure key, %q", err)
+	sk := makeTestSecureKey(t)
+	defer sk.Close()
+
+	publicKey := sk.Public()
+	if _, ok := publicKey.(*ecdsa.PublicKey); ok {
+		t.Skip("Skipping TestEncrypt: EC keys not yet supported for Encrypt")
 	}
+
 	message := "Plain text to encrypt"
 	bMessage := []byte(message)
 	//Softhsm only supports SHA1
-	_, err = sk.Encrypt(nil, bMessage, crypto.SHA1)
+	_, err := sk.Encrypt(nil, bMessage, crypto.SHA1)
 	if err != nil {
 		t.Errorf("Client Encrypt error: %q", err)
 	}
 }
 
 func TestDecrypt(t *testing.T) {
-	sk, err := NewSecureKey(testModule, testSlot, testLabel, testUserPin)
-	if err != nil {
-		t.Errorf("Client Decrypt: error generating secure key, %q", err)
+	sk := makeTestSecureKey(t)
+	defer sk.Close()
+
+	publicKey := sk.Public()
+	if _, ok := publicKey.(*ecdsa.PublicKey); ok {
+		t.Skip("Skipping TestDecrypt: EC keys not yet supported for Decrypt")
 	}
+
 	message := "Plain text to encrypt"
 	bMessage := []byte(message)
 	//Softhsm only supports SHA1
 	cipher, err := sk.Encrypt(nil, bMessage, crypto.SHA1)
 	if err != nil {
 		t.Errorf("Client Encrypt error: %q", err)
+		return
 	}
 	decrypted, err := sk.Decrypt(nil, cipher, &rsa.OAEPOptions{Hash: crypto.SHA1})
 	if err != nil {

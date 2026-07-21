@@ -15,6 +15,8 @@ package util
 
 import (
 	"testing"
+
+	_ "github.com/googleapis/enterprise-certificate-proxy/internal/testflags"
 )
 
 func TestLoadSignerBinaryPath(t *testing.T) {

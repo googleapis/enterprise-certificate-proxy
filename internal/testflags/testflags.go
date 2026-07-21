@@ -1,4 +1,4 @@
-// Copyright 2022 Google LLC.
+// Copyright 2026 Google LLC.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,24 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build windows
-// +build windows
+package testflags
 
-package ncrypt
+import "flag"
 
-import (
-	"testing"
-
-	_ "github.com/googleapis/enterprise-certificate-proxy/internal/testflags"
+var (
+	TestModule  = flag.String("testModule", "", "PKCS11 module path")
+	TestLabel   = flag.String("testLabel", "", "PKCS11 token label")
+	TestUserPin = flag.String("testUserPin", "", "PKCS11 user PIN")
+	TestSlot    = flag.String("testSlot", "", "PKCS11 slot location")
 )
-
-func TestCredProviderNotSupported(t *testing.T) {
-	_, err := Cred("issuer", "store", "unsupported_provider")
-	if err == nil {
-		t.Errorf("Expected error, but got nil.")
-	}
-	want := "provider must be local_machine or current_user"
-	if err.Error() != want {
-		t.Errorf("Expected error is %q, got: %q", want, err.Error())
-	}
-}

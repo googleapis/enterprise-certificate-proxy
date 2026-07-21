@@ -11,11 +11,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build darwin && cgo
+
 package darwin
 
 import (
 	"crypto"
 	"testing"
+
+	_ "github.com/googleapis/enterprise-certificate-proxy/internal/testflags"
 )
 
 const testIssuer = "TestIssuer"
