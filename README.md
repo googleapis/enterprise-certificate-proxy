@@ -179,18 +179,18 @@ To run the PKCS#11 tests against a specific module (such as the Google Enterpris
 
 For example, to run the PKCS#11 package tests:
 ```
-$ ECP_TEST_MODULE=/usr/lib/x86_64-linux-gnu/pkcs11/libnative_pkcs11_credkit.so \
-  ECP_TEST_SLOT=1 \
-  ECP_TEST_LABEL=gecc \
+$ ECP_TEST_MODULE="/usr/lib/x86_64-linux-gnu/pkcs11/libnative_pkcs11_credkit.so" \
+  ECP_TEST_SLOT="1" \
+  ECP_TEST_LABEL="gecc" \
   ECP_TEST_USER_PIN="" \
   go test -v ./...
 ```
 
 To run with the race detector enabled to verify thread safety:
 ```
-$ ECP_TEST_MODULE=/usr/lib/x86_64-linux-gnu/pkcs11/libnative_pkcs11_credkit.so \
-  ECP_TEST_SLOT=1 \
-  ECP_TEST_LABEL=gecc \
+$ ECP_TEST_MODULE="/usr/lib/x86_64-linux-gnu/pkcs11/libnative_pkcs11_credkit.so" \
+  ECP_TEST_SLOT="1" \
+  ECP_TEST_LABEL="gecc" \
   ECP_TEST_USER_PIN="" \
   go test -v -race ./...
 ```
