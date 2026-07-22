@@ -27,8 +27,6 @@ import (
 	"net/url"
 	"os"
 	"testing"
-
-	_ "github.com/googleapis/enterprise-certificate-proxy/internal/testflags"
 )
 
 const (

@@ -18,8 +18,6 @@ package ncrypt
 
 import (
 	"testing"
-
-	_ "github.com/googleapis/enterprise-certificate-proxy/internal/testflags"
 )
 
 func TestCredProviderNotSupported(t *testing.T) {

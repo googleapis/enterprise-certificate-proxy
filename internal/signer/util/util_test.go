@@ -15,8 +15,6 @@ package util
 
 import (
 	"testing"
-
-	_ "github.com/googleapis/enterprise-certificate-proxy/internal/testflags"
 )
 
 func TestLoadConfig(t *testing.T) {

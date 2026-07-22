@@ -21,8 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
-
-	_ "github.com/googleapis/enterprise-certificate-proxy/internal/testflags"
 )
 
 func TestClient_Cred_Success(t *testing.T) {

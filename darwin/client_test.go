@@ -18,8 +18,6 @@ package darwin
 import (
 	"crypto"
 	"testing"
-
-	_ "github.com/googleapis/enterprise-certificate-proxy/internal/testflags"
 )
 
 const testIssuer = "TestIssuer"

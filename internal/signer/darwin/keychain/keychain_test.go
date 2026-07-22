@@ -22,8 +22,6 @@ import (
 	"crypto/rsa"
 	"testing"
 	"unsafe"
-
-	_ "github.com/googleapis/enterprise-certificate-proxy/internal/testflags"
 )
 
 const testIssuer = "TestIssuer"

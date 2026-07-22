@@ -20,31 +20,29 @@ import (
 	"crypto/rsa"
 	"os"
 	"testing"
-
-	"github.com/googleapis/enterprise-certificate-proxy/internal/testflags"
 )
 
 func getTestParams() (string, string, string, string) {
-	module := *testflags.TestModule
+	module := os.Getenv("ECP_TEST_MODULE")
 	if module == "" {
 		module = "/usr/local/lib/softhsm/libsofthsm2.so"
 	}
-	label := *testflags.TestLabel
+	label := os.Getenv("ECP_TEST_LABEL")
 	if label == "" {
 		label = "Demo Object"
 	}
-	pin := *testflags.TestUserPin
+	pin := os.Getenv("ECP_TEST_USER_PIN")
 	if pin == "" {
 		pin = "0000"
 	}
-	slot := *testflags.TestSlot
+	slot := os.Getenv("ECP_TEST_SLOT")
 	return module, slot, label, pin
 }
 
 func makeTestSecureKey(t *testing.T) *SecureKey {
 	module, slot, label, pin := getTestParams()
 	if _, err := os.Stat(module); os.IsNotExist(err) {
-		t.Skipf("Skipping test: PKCS11 module not found at %s", module)
+		t.Skipf("Skipping test: PKCS11 module not found at %s. Set ECP_TEST_MODULE env var to configure.", module)
 	}
 	sk, err := NewSecureKey(module, slot, label, pin)
 	if err != nil {

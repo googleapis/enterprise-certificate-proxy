@@ -167,32 +167,32 @@ $ go test ./...
 
 ### Running PKCS#11 tests with custom modules (e.g. GEC)
 
-To run the PKCS#11 tests against a specific module (such as the Google Enterprise Certificate module `libnative_pkcs11_credkit.so` on Linux), you will need to specify the following custom flags:
+To run the PKCS#11 tests against a specific module (such as the Google Enterprise Certificate module `libnative_pkcs11_credkit.so` on Linux), specify the configuration using environment variables:
 
-#### PKCS#11 Test Flags:
-*   `-testModule`: The absolute file path to the PKCS#11 shared library (the driver for the HSM/token). E.g., `/usr/lib/softhsm/libsofthsm2.so` or `/usr/lib/x86_64-linux-gnu/pkcs11/libnative_pkcs11_credkit.so`.
-*   `-testSlot`: The PKCS#11 slot identifier containing the certificate (e.g., `1` or a hex string like `0x1739427`).
-*   `-testLabel`: The token or certificate label inside the slot (e.g., `"Demo Object"` or `"gecc"`).
-*   `-testUserPin`: The user PIN required to access the slot (defaults to `"0000"` for SoftHSM, and empty `""` for GEC).
+#### PKCS#11 Test Environment Variables:
+*   `ECP_TEST_MODULE`: The absolute file path to the PKCS#11 shared library (the driver for the HSM/token). E.g., `/usr/lib/softhsm/libsofthsm2.so` or `/usr/lib/x86_64-linux-gnu/pkcs11/libnative_pkcs11_credkit.so`.
+*   `ECP_TEST_SLOT`: The PKCS#11 slot identifier containing the certificate (e.g., `1` or a hex string like `0x1739427`).
+*   `ECP_TEST_LABEL`: The token or certificate label inside the slot (e.g., `"Demo Object"` or `"gecc"`).
+*   `ECP_TEST_USER_PIN`: The user PIN required to access the slot (defaults to `"0000"` for SoftHSM, and empty `""` for GEC).
 
 #### Example Usage:
 
 For example, to run the PKCS#11 package tests:
 ```
-$ go test -v ./... \
-    -testModule=/usr/lib/x86_64-linux-gnu/pkcs11/libnative_pkcs11_credkit.so \
-    -testSlot=1 \
-    -testLabel=gecc \
-    -testUserPin=""
+$ ECP_TEST_MODULE=/usr/lib/x86_64-linux-gnu/pkcs11/libnative_pkcs11_credkit.so \
+  ECP_TEST_SLOT=1 \
+  ECP_TEST_LABEL=gecc \
+  ECP_TEST_USER_PIN="" \
+  go test -v ./...
 ```
 
 To run with the race detector enabled to verify thread safety:
 ```
-$ go test -v -race ./... \
-    -testModule=/usr/lib/x86_64-linux-gnu/pkcs11/libnative_pkcs11_credkit.so \
-    -testSlot=1 \
-    -testLabel=gecc \
-    -testUserPin=""
+$ ECP_TEST_MODULE=/usr/lib/x86_64-linux-gnu/pkcs11/libnative_pkcs11_credkit.so \
+  ECP_TEST_SLOT=1 \
+  ECP_TEST_LABEL=gecc \
+  ECP_TEST_USER_PIN="" \
+  go test -v -race ./...
 ```
 
 ## Contributing
