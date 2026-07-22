@@ -11,13 +11,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
     - name: Bootstrap SoftHSM Credentials
       run: ./scripts/softhsm_setup.sh
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
       with:
         go-version: 1.26
 
@@ -30,7 +30,7 @@ jobs:
       run: go test -v ./... -testSlot=$(pkcs11-tool --list-slots --module "/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so" | grep -Eo "0x[A-Fa-f0-9]+" | head -n 1)
 
     - name: Lint
-      uses: golangci/golangci-lint-action@v9
+      uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
       with:
         version: latest
         working-directory: ./internal/signer/linux
@@ -39,7 +39,7 @@ jobs:
     - name: Create Binaries
       run: ./build/scripts/linux_amd64.sh
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: linux_amd64
         path: ./build/bin/linux_amd64/*
