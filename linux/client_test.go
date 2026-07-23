@@ -25,7 +25,7 @@ import (
 func getTestParams() (string, string, string, string) {
 	module := os.Getenv("ECP_TEST_MODULE")
 	if module == "" {
-		module = "/usr/local/lib/softhsm/libsofthsm2.so"
+		module = "/usr/lib/softhsm/libsofthsm2.so"
 	}
 	label := os.Getenv("ECP_TEST_LABEL")
 	if label == "" {

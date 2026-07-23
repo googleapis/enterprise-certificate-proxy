@@ -143,6 +143,8 @@ func (k *Key) CertificateChain() [][]byte {
 
 // Close releases resources held by the credential.
 func (k *Key) Close() {
+	k.mu.Lock()
+	defer k.mu.Unlock()
 	_ = k.slot.Close()
 	_ = k.module.Close()
 }
