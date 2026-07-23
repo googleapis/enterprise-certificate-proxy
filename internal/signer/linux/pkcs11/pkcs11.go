@@ -16,12 +16,14 @@
 package pkcs11
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"hash"
@@ -72,12 +74,32 @@ func Cred(pkcs11Module string, slotUint32Str string, label string, userPin strin
 	if err != nil {
 		return nil, err
 	}
-	x509, err := cert.X509()
+	leafX509, err := cert.X509()
 	if err != nil {
 		return nil, err
 	}
-	var kchain [][]byte
-	kchain = append(kchain, x509.Raw)
+
+	// Fetch all certificate objects to resolve intermediate and root certificates
+	allCertObjs, err := kslot.Objects(pkcs11.Filter{Class: pkcs11.ClassCertificate})
+	if err != nil {
+		return nil, err
+	}
+
+	var candidates []*x509.Certificate
+	for _, cObj := range allCertObjs {
+		c, err := cObj.Certificate()
+		if err != nil {
+			continue
+		}
+		x, err := c.X509()
+		if err != nil {
+			continue
+		}
+		candidates = append(candidates, x)
+	}
+
+	// Build the chain starting with the leaf certificate
+	kchain := buildChain(leafX509, candidates)
 
 	pubKeys, err := kslot.Objects(pkcs11.Filter{Class: pkcs11.ClassPublicKey, Label: label})
 	if err != nil {
@@ -233,4 +255,40 @@ func cryptoHashToHash(hash crypto.Hash) (hash.Hash, error) {
 	default:
 		return nil, errors.New("hash conversion error: Unsupported hash")
 	}
+}
+
+// buildChain builds a certificate chain starting from the leaf certificate, using candidates found in the token.
+func buildChain(leaf *x509.Certificate, candidates []*x509.Certificate) [][]byte {
+	var kchain [][]byte
+	current := leaf
+	kchain = append(kchain, current.Raw)
+
+	// Prevent infinite loops (e.g. self-signed root)
+	visited := make(map[string]bool)
+	visited[string(current.Raw)] = true
+
+	// Traces parents by checking current is not self-signed (root)
+	for !bytes.Equal(current.RawSubject, current.RawIssuer) {
+
+		// Look for current's issuer in the candidate pool
+		var foundIssuer *x509.Certificate
+		for _, cand := range candidates {
+			if bytes.Equal(cand.RawSubject, current.RawIssuer) {
+				if !visited[string(cand.Raw)] {
+					foundIssuer = cand
+					break
+				}
+			}
+		}
+
+		if foundIssuer == nil {
+			break // Issuer not found
+		}
+
+		current = foundIssuer
+		kchain = append(kchain, current.Raw)
+		visited[string(current.Raw)] = true
+	}
+
+	return kchain
 }
