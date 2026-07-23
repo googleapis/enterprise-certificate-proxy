@@ -16,9 +16,14 @@ package pkcs11
 import (
 	"bytes"
 	"crypto"
+	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"flag"
+	"math/big"
 	"testing"
+	"time"
 )
 
 const (
@@ -116,5 +121,91 @@ func TestDecrypt(t *testing.T) {
 	decrypted = bytes.Trim(decrypted, "\x00")
 	if string(decrypted) != msg {
 		t.Errorf("Decrypt error: expected %q, got %q", msg, string(decrypted))
+	}
+}
+
+
+func TestBuildChain(t *testing.T) {
+	// Create mock certificates using Go standard library
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("Failed to generate private key: %v", err)
+	}
+
+	// 1. Create a root CA cert
+	rootTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName: "Root CA",
+		},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+	}
+	rootDER, err := x509.CreateCertificate(rand.Reader, rootTemplate, rootTemplate, &privateKey.PublicKey, privateKey)
+	if err != nil {
+		t.Fatalf("Failed to create root certificate: %v", err)
+	}
+	rootCert, err := x509.ParseCertificate(rootDER)
+	if err != nil {
+		t.Fatalf("Failed to parse root certificate: %v", err)
+	}
+
+	// 2. Create an intermediate CA cert (signed by Root)
+	intermediateTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(2),
+		Subject: pkix.Name{
+			CommonName: "Intermediate CA",
+		},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+	}
+	intermediateDER, err := x509.CreateCertificate(rand.Reader, intermediateTemplate, rootCert, &privateKey.PublicKey, privateKey)
+	if err != nil {
+		t.Fatalf("Failed to create intermediate certificate: %v", err)
+	}
+	intermediateCert, err := x509.ParseCertificate(intermediateDER)
+	if err != nil {
+		t.Fatalf("Failed to parse intermediate certificate: %v", err)
+	}
+
+	// 3. Create a leaf cert (signed by Intermediate)
+	leafTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(3),
+		Subject: pkix.Name{
+			CommonName: "Leaf Cert",
+		},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		IsCA:                  false,
+		BasicConstraintsValid: true,
+	}
+	leafDER, err := x509.CreateCertificate(rand.Reader, leafTemplate, intermediateCert, &privateKey.PublicKey, privateKey)
+	if err != nil {
+		t.Fatalf("Failed to create leaf certificate: %v", err)
+	}
+	leafCert, err := x509.ParseCertificate(leafDER)
+	if err != nil {
+		t.Fatalf("Failed to parse leaf certificate: %v", err)
+	}
+
+	// Test case: Leaf + Intermediate + Root CA available in the candidates pool
+	candidates := []*x509.Certificate{intermediateCert, rootCert}
+	chain := buildChain(leafCert, candidates)
+
+	if len(chain) != 3 {
+		t.Fatalf("Expected chain length of 3, got: %d", len(chain))
+	}
+	if !bytes.Equal(chain[0], leafCert.Raw) {
+		t.Error("First certificate in chain should be the leaf certificate")
+	}
+	if !bytes.Equal(chain[1], intermediateCert.Raw) {
+		t.Error("Second certificate in chain should be the intermediate certificate")
+	}
+	if !bytes.Equal(chain[2], rootCert.Raw) {
+		t.Error("Third certificate in chain should be the root certificate")
 	}
 }
