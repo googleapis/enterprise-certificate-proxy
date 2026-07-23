@@ -124,7 +124,6 @@ func TestDecrypt(t *testing.T) {
 	}
 }
 
-
 func TestBuildChain(t *testing.T) {
 	// Create mock certificates using Go standard library
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)

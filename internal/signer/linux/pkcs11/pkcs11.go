@@ -249,7 +249,6 @@ func cryptoHashToHash(hash crypto.Hash) (hash.Hash, error) {
 	}
 }
 
-
 // buildChain builds a certificate chain starting from the leaf certificate, using candidates found in the token.
 func buildChain(leaf *x509.Certificate, candidates []*x509.Certificate) [][]byte {
 	var kchain [][]byte
