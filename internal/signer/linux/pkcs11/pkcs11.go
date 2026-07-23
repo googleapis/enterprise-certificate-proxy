@@ -259,13 +259,10 @@ func buildChain(leaf *x509.Certificate, candidates []*x509.Certificate) [][]byte
 	visited := make(map[string]bool)
 	visited[string(current.Raw)] = true
 
-	for {
-		// If current is self-signed (root), we stop
-		if bytes.Equal(current.RawSubject, current.RawIssuer) {
-			break
-		}
+	// Traces parents by checking current is not self-signed (root)
+	for !bytes.Equal(current.RawSubject, current.RawIssuer) {
 
-		// Look for current is issuer in the candidate pool
+		// Look for current's issuer in the candidate pool
 		var foundIssuer *x509.Certificate
 		for _, cand := range candidates {
 			if bytes.Equal(cand.RawSubject, current.RawIssuer) {
