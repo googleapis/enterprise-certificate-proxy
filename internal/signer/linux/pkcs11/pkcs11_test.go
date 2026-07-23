@@ -16,14 +16,12 @@ package pkcs11
 import (
 	"bytes"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"flag"
 	"math/big"
-	"crypto/ecdsa"
-	"crypto/rsa"
 	"os"
 	"sync"
 	"testing"
@@ -215,6 +213,8 @@ func TestBuildChain(t *testing.T) {
 	if !bytes.Equal(chain[2], rootCert.Raw) {
 		t.Error("Third certificate in chain should be the root certificate")
 	}
+}
+
 func TestConcurrentSign(t *testing.T) {
 	key := makeTestKey(t)
 	defer key.Close()
