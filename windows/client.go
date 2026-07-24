@@ -11,6 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build windows
+
 // Package windows contains a windows-specific client for accessing the ncrypt APIs directly,
 // bypassing the RPC-mechanism of the universal client.
 package windows

@@ -153,6 +153,48 @@ For amd64 Linux, run `./build/scripts/linux_amd64.sh`. The binaries will be plac
 For amd64 Windows, in powershell terminal, run `.\build\scripts\windows_amd64.ps1`. The binaries will be placed in `build\bin\windows_amd64` folder.
 Note that gcc is required for compiling the Windows shared library. The easiest way to get gcc on Windows is to download Mingw64, and add "gcc.exe" to the powershell path.
 
+## Running tests
+
+You can run ECP unit tests using standard Go testing tools.
+
+### Running all tests
+
+To run all tests across all packages, execute:
+```
+$ go test ./...
+```
+*Note: PKCS#11 unit tests will be automatically skipped if the default SoftHSM module (`/usr/lib/softhsm/libsofthsm2.so`) is missing or cannot be initialized. This ensures the rest of ECP's package tests can pass cleanly out of the box.*
+
+### Running PKCS#11 tests with custom modules (e.g. GEC)
+
+To run the PKCS#11 tests against a specific module (such as the Google Enterprise Certificate module `libnative_pkcs11_credkit.so` on Linux), specify the configuration using environment variables:
+
+#### PKCS#11 Test Environment Variables:
+*   `ECP_TEST_MODULE`: The absolute file path to the PKCS#11 shared library (the driver for the HSM/token). E.g., `/usr/lib/softhsm/libsofthsm2.so` or `/usr/lib/x86_64-linux-gnu/pkcs11/libnative_pkcs11_credkit.so`.
+*   `ECP_TEST_SLOT`: The PKCS#11 slot identifier containing the certificate (e.g., `1` or a hex string like `0x1739427`).
+*   `ECP_TEST_LABEL`: The token or certificate label inside the slot (e.g., `"Demo Object"` or `"gecc"`).
+*   `ECP_TEST_USER_PIN`: The user PIN required to access the slot (defaults to `"0000"` for SoftHSM, and empty `""` for GEC).
+
+#### Example Usage:
+
+For example, to run the PKCS#11 package tests:
+```
+$ ECP_TEST_MODULE="/usr/lib/x86_64-linux-gnu/pkcs11/libnative_pkcs11_credkit.so" \
+  ECP_TEST_SLOT="1" \
+  ECP_TEST_LABEL="gecc" \
+  ECP_TEST_USER_PIN="" \
+  go test -v ./...
+```
+
+To run with the race detector enabled to verify thread safety:
+```
+$ ECP_TEST_MODULE="/usr/lib/x86_64-linux-gnu/pkcs11/libnative_pkcs11_credkit.so" \
+  ECP_TEST_SLOT="1" \
+  ECP_TEST_LABEL="gecc" \
+  ECP_TEST_USER_PIN="" \
+  go test -v -race ./...
+```
+
 ## Contributing
 
 Contributions to this library are always welcome and highly encouraged. See the [CONTRIBUTING](./CONTRIBUTING.md) documentation for more information on how to get started.

@@ -11,6 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build darwin
+
 // Signer.go is a net/rpc server that listens on stdin/stdout, exposing
 // methods that perform device certificate signing for Mac OS using keychain utils.
 // This server is intended to be launched as a subprocess by the signer client,
