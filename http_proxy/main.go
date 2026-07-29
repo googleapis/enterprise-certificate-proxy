@@ -26,19 +26,17 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/googleapis/enterprise-certificate-proxy/client"
+	"github.com/googleapis/enterprise-certificate-proxy/internal/logger"
 )
 
 const (
@@ -66,17 +64,6 @@ type AppConfig struct {
 	EnterpriseCertificateFilePath    string
 	GcloudConfiguredUpstreamProxyURL string
 	NonceToken                       string
-}
-
-// If ECP Logging is enabled return true
-// Otherwise return false
-func enableECPLogging() bool {
-	if os.Getenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS") != "" {
-		return true
-	}
-
-	log.SetOutput(io.Discard)
-	return false
 }
 
 func (cfg *AppConfig) validate() error {
@@ -141,7 +128,6 @@ type ErrorResponse struct {
 // and writes it to the http.ResponseWriter with the specified status code.
 // It also sets a custom header to indicate the error originated from this proxy.
 func writeError(w http.ResponseWriter, originalError error, errorMsg string, statusCode int) {
-	enableECPLogging()
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set(ecpInternalErrorHeader, "true")
 	w.WriteHeader(statusCode)
@@ -153,14 +139,13 @@ func writeError(w http.ResponseWriter, originalError error, errorMsg string, sta
 	}
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("Failed to write error response: %v", err)
+		logger.Errorf("Failed to write error response: %v", err)
 	}
 }
 
 // newTransport creates an http.RoundTripper configured with the given TLS config
 // and optional upstream proxy.
 func newTransport(tlsConfig *tls.Config, proxyConfig *ProxyConfig) http.RoundTripper {
-	enableECPLogging()
 	transport := &http.Transport{
 		TLSClientConfig:       tlsConfig,
 		TLSHandshakeTimeout:   proxyConfig.TLSHandshakeTimeout,
@@ -175,7 +160,7 @@ func newTransport(tlsConfig *tls.Config, proxyConfig *ProxyConfig) http.RoundTri
 	// If an upstream proxy is configured, set it on the transport.
 	if proxyConfig.UpstreamProxyURL != nil {
 		transport.Proxy = http.ProxyURL(proxyConfig.UpstreamProxyURL)
-		log.Printf("Using upstream proxy URL: %s", proxyConfig.UpstreamProxyURL)
+		logger.Infof("Using upstream proxy URL: %s", proxyConfig.UpstreamProxyURL)
 	}
 	return transport
 }
@@ -201,7 +186,6 @@ func (t *RoutingTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 // newECPProxyHandler creates the primary http.Handler for the ECP Proxy server.
 // It uses httputil.ReverseProxy to forward requests.
 func newECPProxyHandler(transport http.RoundTripper) http.Handler {
-	enableECPLogging()
 	proxy := &httputil.ReverseProxy{
 		// Director modifies the request just before it is sent to the target.
 		// It reads the target host from our custom header, sets the request URL,
@@ -225,7 +209,7 @@ func newECPProxyHandler(transport http.RoundTripper) http.Handler {
 		// ErrorHandler provides a custom function to handle errors that occur
 		// during the proxying process, ensuring a consistent error format.
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
-			log.Printf("Proxy error: %v", err)
+			logger.Errorf("Proxy error: %v", err)
 			writeError(w, err, "Failed to forward request", http.StatusBadGateway)
 		},
 	}
@@ -246,12 +230,11 @@ func newECPProxyHandler(transport http.RoundTripper) http.Handler {
 // newReadyzHandler creates an http.Handler for the /readyz endpoint.
 // It writes the nonce token to the response body.
 func newReadyzHandler(nonceToken string) http.Handler {
-	enableECPLogging()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write([]byte(nonceToken)); err != nil {
-			log.Printf("Failed to write readyz response: %v", err)
+			logger.Errorf("Failed to write readyz response: %v", err)
 		}
 	})
 }
@@ -259,7 +242,6 @@ func newReadyzHandler(nonceToken string) http.Handler {
 // runServer starts the HTTP server with the given handler and configuration.
 // It listens for OS signals from the provided context to perform a graceful shutdown.
 func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handler) error {
-	enableECPLogging()
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", proxyConfig.Port),
 		Handler: handler,
@@ -270,7 +252,7 @@ func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handl
 
 	// Run the server in a goroutine.
 	go func() {
-		log.Printf("Starting proxy server on port %d", proxyConfig.Port)
+		logger.Infof("Starting proxy server on port %d", proxyConfig.Port)
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			errChan <- fmt.Errorf("failed to start proxy server: %w", err)
 		}
@@ -281,13 +263,13 @@ func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handl
 	case err := <-errChan:
 		return err
 	case <-ctx.Done():
-		log.Println("Shutdown signal received, shutting down server gracefully...")
+		logger.Info("Shutdown signal received, shutting down server gracefully...")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), proxyConfig.ShutdownTimeout)
 		defer cancel()
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			return fmt.Errorf("server shutdown failed: %w", err)
 		}
-		log.Println("Server shut down gracefully")
+		logger.Info("Server shut down gracefully")
 	}
 
 	return nil
@@ -296,14 +278,13 @@ func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handl
 // run is the main application logic. It initializes the configuration, ECP client,
 // HTTP transport, and proxy handler, then starts the server.
 func run(ctx context.Context, cfg *AppConfig) error {
-	enableECPLogging()
-	log.Print("Starting ECP Proxy...")
+	logger.Info("Starting ECP Proxy...")
 
 	proxyConfig := newDefaultProxyConfig()
 	proxyConfig.Port = cfg.Port
 
 	// Create tlsConfig
-	log.Println("Loading ECP credential...")
+	logger.Info("Loading ECP credential...")
 	key, err := client.Cred(cfg.EnterpriseCertificateFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to get ECP credential: %w", err)
@@ -358,16 +339,15 @@ func run(ctx context.Context, cfg *AppConfig) error {
 // that listens for interrupt signals (SIGINT, SIGTERM) to enable graceful
 // shutdown, and then calls the main run function.
 func main() {
-	enableECPLogging()
 	cfg, err := newAppConfigFromFlags()
 	if err != nil {
-		log.Fatalf("ECP Proxy initialization failed due to invalid configuration: %v", err)
+		logger.Fatalf("ECP Proxy initialization failed due to invalid configuration: %v", err)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	if err := run(ctx, cfg); err != nil {
-		log.Fatalf("ECP Proxy failed: %v", err)
+		logger.Fatalf("ECP Proxy failed: %v", err)
 	}
 }
