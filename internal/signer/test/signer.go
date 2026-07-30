@@ -20,10 +20,11 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"io"
-	"log"
 	"net/rpc"
 	"os"
 	"time"
+
+	"github.com/googleapis/enterprise-certificate-proxy/internal/logger"
 )
 
 // SignArgs encapsulate the parameters for the Sign method.
@@ -106,14 +107,14 @@ func main() {
 
 	data, err := os.ReadFile(os.Args[1])
 	if err != nil {
-		log.Fatalf("Error reading certificate: %v", err)
+		logger.Fatalf("Error reading certificate: %v", err)
 	}
 	cert, _ := tls.X509KeyPair(data, data)
 
 	enterpriseCertSigner.cert = &cert
 
 	if err := rpc.Register(enterpriseCertSigner); err != nil {
-		log.Fatalf("Error registering net/rpc: %v", err)
+		logger.Fatalf("Error registering net/rpc: %v", err)
 	}
 
 	// If the parent process dies, we should exit.
@@ -122,7 +123,7 @@ func main() {
 	go func() {
 		for {
 			if os.Getppid() == 1 {
-				log.Fatalln("Parent process died, exiting...")
+				logger.Fatal("Parent process died, exiting...")
 			}
 			time.Sleep(time.Second)
 		}

@@ -18,18 +18,19 @@ package main
 import (
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/googleapis/enterprise-certificate-proxy/internal/logger"
 )
 
 // ProxyHandler is the main handler for all incoming proxy requests.
 // It decides whether to handle an HTTPS tunnel or a standard HTTP request.
 func ProxyHandler(w http.ResponseWriter, r *http.Request) {
 	// Log the incoming request
-	log.Printf("Received request: %s %s %s", r.Method, r.Host, r.URL.String())
+	logger.Infof("Received request: %s %s %s", r.Method, r.Host, r.URL.String())
 
 	if r.Method == http.MethodConnect {
 		// Handle HTTPS requests using a tunnel
@@ -80,9 +81,9 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 	// Copy the response body to the client
 	written, err := io.Copy(w, resp.Body)
 	if err != nil {
-		log.Printf("Error copying response body: %v", err)
+		logger.Errorf("Error copying response body: %v", err)
 	}
-	log.Printf("Copied %d bytes to client", written)
+	logger.Infof("Copied %d bytes to client", written)
 }
 
 // handleTunneling handles CONNECT requests for setting up an HTTPS tunnel.
