@@ -322,7 +322,7 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 
 			proxyConfig := &ProxyConfig{
 				Port:      ecpProxyPort,
-				TlsConfig: tlsConfig,
+				TLSConfig: tlsConfig,
 			}
 
 			if tc.passthroughProxyAddress != "" {
@@ -333,7 +333,7 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 				proxyConfig.UpstreamProxyURL = passthroughProxyServerURL
 			}
 
-			ecpTransport := newTransport(proxyConfig.TlsConfig, proxyConfig).(*http.Transport)
+			ecpTransport := newTransport(proxyConfig.TLSConfig, proxyConfig).(*http.Transport)
 
 			defaultTLSConfig := &tls.Config{
 				RootCAs:            tc.ecpMTLSCerts.CAPool,

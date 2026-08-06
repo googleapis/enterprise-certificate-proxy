@@ -79,15 +79,17 @@ func (cfg *AppConfig) validate() error {
 	return nil
 }
 
-// newAppConfigFromFlags parses command-line flags, validates them, and returns a new AppConfig.
-func newAppConfigFromFlags() (*AppConfig, error) {
+// parseFlags parses command-line flags from the given FlagSet and arguments slice.
+func parseFlags(fs *flag.FlagSet, args []string) (*AppConfig, error) {
 	cfg := &AppConfig{}
-	flag.IntVar(&cfg.Port, "port", 0, "The port to listen on for HTTP requests. (Required)")
-	flag.StringVar(&cfg.EnterpriseCertificateFilePath, "enterprise_certificate_file_path", "", "The path to the enterprise certificate file.")
-	flag.StringVar(&cfg.GcloudConfiguredUpstreamProxyURL, "gcloud_configured_upstream_proxy_url", "", "The upstream proxy URL configured through gcloud.")
-	flag.StringVar(&cfg.NonceToken, "nonce_token", "", "The nonce token is returned in /readyz endpoint, and can be used to authenticate this server. (Required)")
-	flag.BoolVar(&cfg.IgnoreSIGINT, "ignore_sigint", false, "Ignore SIGINT signals and rely on stdin EOF / SIGTERM for shutdown.")
-	flag.Parse()
+	fs.IntVar(&cfg.Port, "port", 0, "The port to listen on for HTTP requests. (Required)")
+	fs.StringVar(&cfg.EnterpriseCertificateFilePath, "enterprise_certificate_file_path", "", "The path to the enterprise certificate file.")
+	fs.StringVar(&cfg.GcloudConfiguredUpstreamProxyURL, "gcloud_configured_upstream_proxy_url", "", "The upstream proxy URL configured through gcloud.")
+	fs.StringVar(&cfg.NonceToken, "nonce_token", "", "The nonce token is returned in /readyz endpoint, and can be used to authenticate this server. (Required)")
+	fs.BoolVar(&cfg.IgnoreSIGINT, "ignore_sigint", false, "Ignore SIGINT signals and rely on stdin EOF / SIGTERM for shutdown.")
+	if err := fs.Parse(args); err != nil {
+		return nil, err
+	}
 
 	if err := cfg.validate(); err != nil {
 		return nil, err
@@ -96,10 +98,15 @@ func newAppConfigFromFlags() (*AppConfig, error) {
 	return cfg, nil
 }
 
+// newAppConfigFromFlags parses command-line flags from os.Args[1:] using flag.CommandLine.
+func newAppConfigFromFlags() (*AppConfig, error) {
+	return parseFlags(flag.CommandLine, os.Args[1:])
+}
+
 // ProxyConfig holds the configuration for the ECPPProxy server.
 type ProxyConfig struct {
 	Port                int           // The port for the ECPPProxy server to listen on.
-	TlsConfig           *tls.Config   // TLS configuration for mTLS.
+	TLSConfig           *tls.Config   // TLS configuration for mTLS.
 	UpstreamProxyURL    *url.URL      // Optional upstream proxy URL. This will configure the ECPPProxy transport to use this proxy.
 	TLSHandshakeTimeout time.Duration // Max duration for TLS handshake to the target.
 	ProxyRequestTimeout time.Duration // Max duration for the entire proxy request.
@@ -136,10 +143,15 @@ func writeError(w http.ResponseWriter, originalError error, errorMsg string, sta
 	w.Header().Set(ecpInternalErrorHeader, "true")
 	w.WriteHeader(statusCode)
 
+	var errStr string
+	if originalError != nil {
+		errStr = originalError.Error()
+	}
+
 	resp := ErrorResponse{
 		Message: errorMsg,
 		Code:    statusCode,
-		Error:   originalError.Error(),
+		Error:   errStr,
 	}
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
@@ -297,7 +309,7 @@ func run(ctx context.Context, cfg *AppConfig) error {
 
 	// The tls.Certificate is configured with the certificate chain and a custom
 	// crypto.Signer (the ECP client.Key) for the private key operations.
-	proxyConfig.TlsConfig = &tls.Config{
+	proxyConfig.TLSConfig = &tls.Config{
 		Certificates: []tls.Certificate{
 			{
 				Certificate: key.CertificateChain(),
@@ -318,7 +330,7 @@ func run(ctx context.Context, cfg *AppConfig) error {
 	}
 
 	// Create Proxy Transport
-	ecpTransport := newTransport(proxyConfig.TlsConfig, proxyConfig)
+	ecpTransport := newTransport(proxyConfig.TLSConfig, proxyConfig)
 	defaultTransport := newTransport(nil, proxyConfig)
 
 	routingTransport := &RoutingTransport{
@@ -351,10 +363,10 @@ func main() {
 	var signalCtx context.Context
 	var signalStop context.CancelFunc
 	if cfg.IgnoreSIGINT {
-		signal.Ignore(syscall.SIGINT)
+		signal.Ignore(syscall.SIGINT, os.Interrupt)
 		signalCtx, signalStop = signal.NotifyContext(context.Background(), syscall.SIGTERM)
 	} else {
-		signalCtx, signalStop = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+		signalCtx, signalStop = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	}
 	defer signalStop()
 

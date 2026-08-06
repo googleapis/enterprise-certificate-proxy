@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -120,25 +121,13 @@ func TestAppConfigFromFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Each test needs its own flag set.
 			fs := flag.NewFlagSet(tt.name, flag.ContinueOnError)
-			// Discard output to avoid polluting test logs.
 			fs.SetOutput(io.Discard)
 
-			// Temporarily replace the default command-line flags with our test set.
-			originalCommandLine := flag.CommandLine
-			flag.CommandLine = fs
-			defer func() { flag.CommandLine = originalCommandLine }()
-
-			// Temporarily replace os.Args to simulate command-line arguments.
-			originalArgs := os.Args
-			os.Args = append([]string{tt.name}, tt.args...)
-			defer func() { os.Args = originalArgs }()
-
-			got, err := newAppConfigFromFlags()
+			got, err := parseFlags(fs, tt.args)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("newProxyConfigFromFlags() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("parseFlags() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
@@ -559,8 +548,19 @@ func TestHelperProcess(t *testing.T) {
 	os.Exit(0)
 }
 
+func getFreePort(t *testing.T) string {
+	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Failed to listen on ephemeral port: %v", err)
+	}
+	port := fmt.Sprintf("%d", l.Addr().(*net.TCPAddr).Port)
+	l.Close()
+	return port
+}
+
 func TestIgnoreSIGINT_SignalAndStdinEOF(t *testing.T) {
-	port := "40999"
+	port := getFreePort(t)
 	nonce := "testnonce123"
 	cmd := exec.Command(os.Args[0], "-test.run=^TestHelperProcess$")
 	cmd.Env = append(os.Environ(),
@@ -631,7 +631,7 @@ func TestIgnoreSIGINT_SignalAndStdinEOF(t *testing.T) {
 }
 
 func TestDefaultSIGINT_SignalHandling(t *testing.T) {
-	port := "40998"
+	port := getFreePort(t)
 	nonce := "testnonce456"
 	cmd := exec.Command(os.Args[0], "-test.run=^TestHelperProcess$")
 	cmd.Env = append(os.Environ(),
