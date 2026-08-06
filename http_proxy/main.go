@@ -26,10 +26,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -64,6 +66,7 @@ type AppConfig struct {
 	EnterpriseCertificateFilePath    string
 	GcloudConfiguredUpstreamProxyURL string
 	NonceToken                       string
+	IgnoreSIGINT                     bool
 }
 
 func (cfg *AppConfig) validate() error {
@@ -83,6 +86,7 @@ func newAppConfigFromFlags() (*AppConfig, error) {
 	flag.StringVar(&cfg.EnterpriseCertificateFilePath, "enterprise_certificate_file_path", "", "The path to the enterprise certificate file.")
 	flag.StringVar(&cfg.GcloudConfiguredUpstreamProxyURL, "gcloud_configured_upstream_proxy_url", "", "The upstream proxy URL configured through gcloud.")
 	flag.StringVar(&cfg.NonceToken, "nonce_token", "", "The nonce token is returned in /readyz endpoint, and can be used to authenticate this server. (Required)")
+	flag.BoolVar(&cfg.IgnoreSIGINT, "ignore_sigint", false, "Ignore SIGINT signals and rely on stdin EOF / SIGTERM for shutdown.")
 	flag.Parse()
 
 	if err := cfg.validate(); err != nil {
@@ -344,8 +348,26 @@ func main() {
 		logger.Fatalf("ECP Proxy initialization failed due to invalid configuration: %v", err)
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
+	var signalCtx context.Context
+	var signalStop context.CancelFunc
+	if cfg.IgnoreSIGINT {
+		signal.Ignore(syscall.SIGINT)
+		signalCtx, signalStop = signal.NotifyContext(context.Background(), syscall.SIGTERM)
+	} else {
+		signalCtx, signalStop = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	}
+	defer signalStop()
+
+	ctx, cancel := context.WithCancel(signalCtx)
+	defer cancel()
+
+	if cfg.IgnoreSIGINT {
+		go func() {
+			_, _ = io.Copy(io.Discard, os.Stdin)
+			logger.Info("Parent process pipe closed (EOF). Shutting down proxy...")
+			cancel()
+		}()
+	}
 
 	if err := run(ctx, cfg); err != nil {
 		logger.Fatalf("ECP Proxy failed: %v", err)

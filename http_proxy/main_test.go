@@ -26,7 +26,11 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"os/exec"
+	"strings"
+	"syscall"
 	"testing"
+	"time"
 )
 
 const (
@@ -102,6 +106,16 @@ func TestAppConfigFromFlags(t *testing.T) {
 				NonceToken: "my-secret-token",
 			},
 		},
+		{
+			name:    "Happy Path with IgnoreSIGINT",
+			args:    []string{"-port", "8080", "-nonce_token", "my-secret-token", "-ignore_sigint"},
+			wantErr: false,
+			want: &AppConfig{
+				Port:         8080,
+				NonceToken:   "my-secret-token",
+				IgnoreSIGINT: true,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -140,6 +154,9 @@ func TestAppConfigFromFlags(t *testing.T) {
 				}
 				if got.NonceToken != tt.want.NonceToken {
 					t.Errorf("newProxyConfigFromFlags() NonceToken = %v, want %v", got.NonceToken, tt.want.NonceToken)
+				}
+				if got.IgnoreSIGINT != tt.want.IgnoreSIGINT {
+					t.Errorf("newProxyConfigFromFlags() IgnoreSIGINT = %v, want %v", got.IgnoreSIGINT, tt.want.IgnoreSIGINT)
 				}
 			}
 		})
@@ -530,5 +547,136 @@ func TestRoutingTransport(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestHelperProcess(t *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+	os.Args = strings.Fields(os.Getenv("HELPER_ARGS"))
+	main()
+	os.Exit(0)
+}
+
+func TestIgnoreSIGINT_SignalAndStdinEOF(t *testing.T) {
+	port := "40999"
+	nonce := "testnonce123"
+	cmd := exec.Command(os.Args[0], "-test.run=^TestHelperProcess$")
+	cmd.Env = append(os.Environ(),
+		"GO_WANT_HELPER_PROCESS=1",
+		fmt.Sprintf("HELPER_ARGS=ecp_http_proxy -port %s -nonce_token %s -ignore_sigint", port, nonce),
+	)
+	stdinPipe, err := cmd.StdinPipe()
+	if err != nil {
+		t.Fatalf("Failed to create StdinPipe: %v", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("Failed to start helper process: %v", err)
+	}
+
+	// Wait for server readiness
+	ready := false
+	for i := 0; i < 20; i++ {
+		time.Sleep(100 * time.Millisecond)
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%s/readyz", port))
+		if err == nil {
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if string(body) == nonce {
+				ready = true
+				break
+			}
+		}
+	}
+	if !ready {
+		cmd.Process.Kill()
+		t.Fatalf("Helper process did not become ready on port %s", port)
+	}
+
+	// Test 1: Send SIGINT and verify process does not exit
+	if err := cmd.Process.Signal(syscall.SIGINT); err != nil {
+		t.Fatalf("Failed to send SIGINT: %v", err)
+	}
+	time.Sleep(200 * time.Millisecond)
+
+	// Verify server is still responsive after SIGINT
+	resp, err := http.Get(fmt.Sprintf("http://localhost:%s/readyz", port))
+	if err != nil {
+		cmd.Process.Kill()
+		t.Fatalf("Server was not responsive after SIGINT: %v", err)
+	}
+	resp.Body.Close()
+
+	// Test 2: Close stdin pipe and verify process exits cleanly
+	if err := stdinPipe.Close(); err != nil {
+		t.Fatalf("Failed to close StdinPipe: %v", err)
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("Process exited with error after stdin close: %v", err)
+		}
+	case <-time.After(3 * time.Second):
+		cmd.Process.Kill()
+		t.Fatalf("Process did not exit after stdin close")
+	}
+}
+
+func TestDefaultSIGINT_SignalHandling(t *testing.T) {
+	port := "40998"
+	nonce := "testnonce456"
+	cmd := exec.Command(os.Args[0], "-test.run=^TestHelperProcess$")
+	cmd.Env = append(os.Environ(),
+		"GO_WANT_HELPER_PROCESS=1",
+		fmt.Sprintf("HELPER_ARGS=ecp_http_proxy -port %s -nonce_token %s", port, nonce),
+	)
+
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("Failed to start helper process: %v", err)
+	}
+
+	// Wait for server readiness
+	ready := false
+	for i := 0; i < 20; i++ {
+		time.Sleep(100 * time.Millisecond)
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%s/readyz", port))
+		if err == nil {
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if string(body) == nonce {
+				ready = true
+				break
+			}
+		}
+	}
+	if !ready {
+		cmd.Process.Kill()
+		t.Fatalf("Helper process did not become ready on port %s", port)
+	}
+
+	// Send SIGINT - default behavior (without -ignore_sigint) should terminate the process
+	if err := cmd.Process.Signal(syscall.SIGINT); err != nil {
+		t.Fatalf("Failed to send SIGINT: %v", err)
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	select {
+	case <-done:
+		// Success: process terminated on SIGINT
+	case <-time.After(3 * time.Second):
+		cmd.Process.Kill()
+		t.Fatalf("Process did not terminate on SIGINT when -ignore_sigint was omitted")
 	}
 }
