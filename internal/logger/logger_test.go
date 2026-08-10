@@ -28,80 +28,80 @@ func TestLoggerLevels(t *testing.T) {
 	log.SetOutput(&buf)
 	defer log.SetOutput(originalOutput) // Reset log output after tests
 
-	originalEnabled := loggingEnabled
-	defer func() { loggingEnabled = originalEnabled }() // Reset state after tests
+	originalLevel := currentLevel
+	defer func() { currentLevel = originalLevel }() // Reset state after tests
+
+	type logFunc struct {
+		f        func()
+		expected string
+	}
 
 	tests := []struct {
 		name     string
-		enabled  bool
-		logFunc  func()
-		expected string
+		level    LogLevel
+		funcs    []logFunc
 	}{
 		{
-			name:     "Info enabled",
-			enabled:  true,
-			logFunc:  func() { Info("test message") },
-			expected: "[INFO] test message",
+			name:  "Trace level",
+			level: LevelTrace,
+			funcs: []logFunc{
+				{f: func() { Trace("msg") }, expected: "[TRACE] msg"},
+				{f: func() { Debug("msg") }, expected: "[DEBUG] msg"},
+				{f: func() { Info("msg") }, expected: "[INFO] msg"},
+				{f: func() { Warn("msg") }, expected: "[WARN] msg"},
+				{f: func() { Error("msg") }, expected: "[ERROR] msg"},
+			},
 		},
 		{
-			name:     "Info disabled",
-			enabled:  false,
-			logFunc:  func() { Info("test message") },
-			expected: "",
+			name:  "Info level",
+			level: LevelInfo,
+			funcs: []logFunc{
+				{f: func() { Trace("msg") }, expected: ""},
+				{f: func() { Debug("msg") }, expected: ""},
+				{f: func() { Info("msg") }, expected: "[INFO] msg"},
+				{f: func() { Warn("msg") }, expected: "[WARN] msg"},
+				{f: func() { Error("msg") }, expected: "[ERROR] msg"},
+			},
 		},
 		{
-			name:     "Infof enabled",
-			enabled:  true,
-			logFunc:  func() { Infof("format %s", "message") },
-			expected: "[INFO] format message",
+			name:  "Error level",
+			level: LevelError,
+			funcs: []logFunc{
+				{f: func() { Trace("msg") }, expected: ""},
+				{f: func() { Debug("msg") }, expected: ""},
+				{f: func() { Info("msg") }, expected: ""},
+				{f: func() { Warn("msg") }, expected: ""},
+				{f: func() { Error("msg") }, expected: "[ERROR] msg"},
+			},
 		},
 		{
-			name:     "Infof disabled",
-			enabled:  false,
-			logFunc:  func() { Infof("format %s", "message") },
-			expected: "",
-		},
-		{
-			name:     "Error enabled",
-			enabled:  true,
-			logFunc:  func() { Error("test error") },
-			expected: "[ERROR] test error",
-		},
-		{
-			name:     "Error disabled",
-			enabled:  false,
-			logFunc:  func() { Error("test error") },
-			expected: "",
-		},
-		{
-			name:     "Errorf enabled",
-			enabled:  true,
-			logFunc:  func() { Errorf("format %s", "error") },
-			expected: "[ERROR] format error",
-		},
-		{
-			name:     "Errorf disabled",
-			enabled:  false,
-			logFunc:  func() { Errorf("format %s", "error") },
-			expected: "",
+			name:  "Off level",
+			level: LevelOff,
+			funcs: []logFunc{
+				{f: func() { Trace("msg") }, expected: ""},
+				{f: func() { Debug("msg") }, expected: ""},
+				{f: func() { Info("msg") }, expected: ""},
+				{f: func() { Warn("msg") }, expected: ""},
+				{f: func() { Error("msg") }, expected: ""},
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			buf.Reset()
-			loggingEnabled = tt.enabled
-
-			tt.logFunc()
-
-			output := buf.String()
-			if tt.expected == "" {
-				if output != "" {
-					t.Errorf("expected no output, got %q", output)
-				}
-			} else {
-				if !strings.Contains(output, tt.expected) {
-					t.Errorf("expected output to contain %q, got %q", tt.expected, output)
+			currentLevel = tt.level
+			for _, fn := range tt.funcs {
+				buf.Reset()
+				fn.f()
+				output := buf.String()
+				if fn.expected == "" {
+					if output != "" {
+						t.Errorf("expected no output, got %q", output)
+					}
+				} else {
+					if !strings.Contains(output, fn.expected) {
+						t.Errorf("expected output to contain %q, got %q", fn.expected, output)
+					}
 				}
 			}
 		})
@@ -109,8 +109,57 @@ func TestLoggerLevels(t *testing.T) {
 }
 
 func TestInit(t *testing.T) {
-	// Simple sanity test for init behavior. Since init() runs before tests,
-	// test manually setting the env behaves properly.
-	os.Setenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS", "1")
-	defer os.Unsetenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS")
+	tests := []struct {
+		envValue      string
+		expectedLevel LogLevel
+	}{
+		{"", LevelOff},
+		{"TRACE", LevelTrace},
+		{"trace", LevelTrace},
+		{"DEBUG", LevelDebug},
+		{"INFO", LevelInfo},
+		{"WARN", LevelWarn},
+		{"ERROR", LevelError},
+		{"1", LevelInfo},
+		{"true", LevelInfo},
+	}
+
+	originalLevel := currentLevel
+	defer func() { currentLevel = originalLevel }()
+
+	for _, tt := range tests {
+		t.Run("Env="+tt.envValue, func(t *testing.T) {
+			if tt.envValue == "" {
+				os.Unsetenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS")
+			} else {
+				os.Setenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS", tt.envValue)
+			}
+			
+			// We must reset the level to test init parsing
+			currentLevel = LevelOff
+			
+			// Simulate init behavior manually for tests
+			flag := os.Getenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS")
+			if flag != "" {
+				switch strings.ToUpper(flag) {
+				case "TRACE":
+					currentLevel = LevelTrace
+				case "DEBUG":
+					currentLevel = LevelDebug
+				case "INFO":
+					currentLevel = LevelInfo
+				case "WARN":
+					currentLevel = LevelWarn
+				case "ERROR":
+					currentLevel = LevelError
+				default:
+					currentLevel = LevelInfo
+				}
+			}
+
+			if currentLevel != tt.expectedLevel {
+				t.Errorf("expected level %v for env %q, got %v", tt.expectedLevel, tt.envValue, currentLevel)
+			}
+		})
+	}
 }

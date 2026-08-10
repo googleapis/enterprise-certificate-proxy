@@ -18,21 +18,82 @@ package logger
 import (
 	"log"
 	"os"
+	"strings"
 )
 
-var (
-	loggingEnabled bool
+// LogLevel represents the severity of a log message.
+type LogLevel int
+
+const (
+	LevelTrace LogLevel = iota
+	LevelDebug
+	LevelInfo
+	LevelWarn
+	LevelError
+	LevelFatal
+	LevelOff // Used to disable logging
 )
+
+var currentLevel LogLevel = LevelOff
 
 func init() {
-	if os.Getenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS") != "" {
-		loggingEnabled = true
+	flag := os.Getenv("ENABLE_ENTERPRISE_CERTIFICATE_LOGS")
+	if flag != "" {
+		switch strings.ToUpper(flag) {
+		case "TRACE":
+			currentLevel = LevelTrace
+		case "DEBUG":
+			currentLevel = LevelDebug
+		case "INFO":
+			currentLevel = LevelInfo
+		case "WARN":
+			currentLevel = LevelWarn
+		case "ERROR":
+			currentLevel = LevelError
+		default:
+			// For backward compatibility, any other value enables at Info level.
+			currentLevel = LevelInfo
+		}
 	}
+}
+
+// Trace logs a message at Trace level.
+func Trace(v ...any) {
+	if currentLevel > LevelTrace {
+		return
+	}
+	args := append([]any{"[TRACE] "}, v...)
+	log.Print(args...)
+}
+
+// Tracef logs a formatted message at Trace level.
+func Tracef(format string, v ...any) {
+	if currentLevel > LevelTrace {
+		return
+	}
+	log.Printf("[TRACE] "+format, v...)
+}
+
+// Debug logs a message at Debug level.
+func Debug(v ...any) {
+	if currentLevel > LevelDebug {
+		return
+	}
+	args := append([]any{"[DEBUG] "}, v...)
+	log.Print(args...)
+}
+
+// Debugf logs a formatted message at Debug level.
+func Debugf(format string, v ...any) {
+	if currentLevel > LevelDebug {
+		return
+	}
+	log.Printf("[DEBUG] "+format, v...)
 }
 
 // Info logs a message at Info level.
 func Info(v ...any) {
-	if !loggingEnabled {
+	if currentLevel > LevelInfo {
 		return
 	}
 	args := append([]any{"[INFO] "}, v...)
@@ -41,15 +102,32 @@ func Info(v ...any) {
 
 // Infof logs a formatted message at Info level.
 func Infof(format string, v ...any) {
-	if !loggingEnabled {
+	if currentLevel > LevelInfo {
 		return
 	}
 	log.Printf("[INFO] "+format, v...)
 }
 
+// Warn logs a message at Warn level.
+func Warn(v ...any) {
+	if currentLevel > LevelWarn {
+		return
+	}
+	args := append([]any{"[WARN] "}, v...)
+	log.Print(args...)
+}
+
+// Warnf logs a formatted message at Warn level.
+func Warnf(format string, v ...any) {
+	if currentLevel > LevelWarn {
+		return
+	}
+	log.Printf("[WARN] "+format, v...)
+}
+
 // Error logs a message at Error level.
 func Error(v ...any) {
-	if !loggingEnabled {
+	if currentLevel > LevelError {
 		return
 	}
 	args := append([]any{"[ERROR] "}, v...)
@@ -58,7 +136,7 @@ func Error(v ...any) {
 
 // Errorf logs a formatted message at Error level.
 func Errorf(format string, v ...any) {
-	if !loggingEnabled {
+	if currentLevel > LevelError {
 		return
 	}
 	log.Printf("[ERROR] "+format, v...)
