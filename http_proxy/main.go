@@ -77,7 +77,8 @@ type AppConfig struct {
 	GcloudConfiguredUpstreamProxyURL string
 	NonceToken                       string
 	// AuthToken is the per-process shared secret that clients must send in the
-	// authTokenHeader on every proxied request. It is read from authTokenEnvVar.
+	// authTokenHeader on every proxied request when set. It is read from
+	// authTokenEnvVar.
 	AuthToken string
 }
 
@@ -87,9 +88,6 @@ func (cfg *AppConfig) validate() error {
 	}
 	if cfg.NonceToken == "" {
 		return errors.New("nonce_token is required")
-	}
-	if cfg.AuthToken == "" {
-		return fmt.Errorf("%s environment variable is required", authTokenEnvVar)
 	}
 	return nil
 }
@@ -248,18 +246,22 @@ func newECPProxyHandler(transport http.RoundTripper) http.Handler {
 	})
 }
 
-// createAuthenticatedHttpHandler wraps next so that it only receives requests
-// carrying the expected per-process shared secret in authTokenHeader. Requests
-// with a missing or mismatched token are rejected with 401 Unauthorized. The
-// header is removed before calling next so it is never forwarded to the target
-// host.
+// createAuthenticatedHttpHandler wraps next so that when authToken is non-empty,
+// it only receives requests carrying the expected per-process shared secret in
+// authTokenHeader. Requests with a missing or mismatched token are rejected with
+// 401 Unauthorized. When authToken is empty (e.g., when launched by an older
+// gcloud version that does not set ECP_HTTP_PROXY_AUTH_TOKEN), requests are
+// allowed through for backward compatibility. The header is always removed
+// before calling next so it is never forwarded to the target host.
 func createAuthenticatedHttpHandler(authToken string, next http.Handler) http.Handler {
 	expected := []byte(authToken)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		got := []byte(r.Header.Get(authTokenHeader))
-		if len(expected) == 0 || subtle.ConstantTimeCompare(got, expected) != 1 {
-			writeError(w, fmt.Errorf("missing or invalid %s header", authTokenHeader), "Unauthorized", http.StatusUnauthorized)
-			return
+		if len(expected) > 0 {
+			got := []byte(r.Header.Get(authTokenHeader))
+			if subtle.ConstantTimeCompare(got, expected) != 1 {
+				writeError(w, fmt.Errorf("missing or invalid %s header", authTokenHeader), "Unauthorized", http.StatusUnauthorized)
+				return
+			}
 		}
 		r.Header.Del(authTokenHeader)
 		next.ServeHTTP(w, r)
@@ -293,8 +295,8 @@ func newRouter(readyz, ecpProxy http.Handler) http.Handler {
 }
 
 // runServer starts the HTTP server with the given handler and configuration.
-// It binds explicitly to the IPv4 loopback interface (127.0.0.1) so the proxy
-// is never reachable from external network interfaces, and listens for OS
+// It binds explicitly to the loopback interfaces (127.0.0.1 and ::1) so the
+// proxy is never reachable from external network interfaces, and listens for OS
 // signals from the provided context to perform a graceful shutdown.
 func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handler) error {
 	server := &http.Server{
@@ -302,8 +304,24 @@ func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handl
 		Handler: handler,
 	}
 
-	// Channel to receive errors from the server's ListenAndServe goroutine.
-	errChan := make(chan error, 1)
+	// Channel to receive errors from the server's ListenAndServe / Serve goroutines.
+	errChan := make(chan error, 2)
+
+	// Also bind IPv6 loopback ([::1]) when available so older gcloud versions
+	// connecting to "localhost" work on IPv6-first systems and cannot be
+	// intercepted by another local process squatting [::1] on the same port.
+	ipv6Addr := fmt.Sprintf("[::1]:%d", proxyConfig.Port)
+	if ipv6Listener, err := net.Listen("tcp6", ipv6Addr); err == nil {
+		defer ipv6Listener.Close()
+		go func() {
+			logger.Infof("Starting proxy server on %s", ipv6Addr)
+			if err := server.Serve(ipv6Listener); err != http.ErrServerClosed {
+				errChan <- fmt.Errorf("failed to start proxy server on %s: %w", ipv6Addr, err)
+			}
+		}()
+	} else if errors.Is(err, syscall.EADDRINUSE) {
+		return fmt.Errorf("failed to start proxy server on %s: %w", ipv6Addr, err)
+	}
 
 	// Run the server in a goroutine.
 	go func() {
@@ -316,6 +334,7 @@ func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handl
 	// Block until we receive an error or a shutdown signal from the context.
 	select {
 	case err := <-errChan:
+		_ = server.Close()
 		return err
 	case <-ctx.Done():
 		logger.Info("Shutdown signal received, shutting down server gracefully...")

@@ -121,10 +121,15 @@ func TestAppConfigFromFlags(t *testing.T) {
 			},
 		},
 		{
-			name:         "Missing Auth Token Env Var",
+			name:         "Missing Auth Token Env Var (Backward Compatibility with Old gcloud)",
 			args:         []string{"-port", "8080", "-nonce_token", "abc"},
 			envAuthToken: "",
-			wantErr:      true,
+			wantErr:      false,
+			want: &AppConfig{
+				Port:       8080,
+				NonceToken: "abc",
+				AuthToken:  "",
+			},
 		},
 	}
 
@@ -625,11 +630,19 @@ func TestCreateAuthenticatedHttpHandler(t *testing.T) {
 			wantStatusCode: http.StatusUnauthorized,
 		},
 		{
-			name:           "server_without_token_rejects_all",
+			name:           "server_without_token_allows_requests_and_strips_header",
 			serverToken:    "",
-			requestToken:   "",
+			requestToken:   "unexpected-token",
 			setHeader:      true,
-			wantStatusCode: http.StatusUnauthorized,
+			wantStatusCode: http.StatusOK,
+			wantForwarded:  true,
+		},
+		{
+			name:           "server_without_token_allows_requests_without_header",
+			serverToken:    "",
+			setHeader:      false,
+			wantStatusCode: http.StatusOK,
+			wantForwarded:  true,
 		},
 	}
 
@@ -734,21 +747,39 @@ func TestRoutingTransport(t *testing.T) {
 }
 
 func TestRunServer_BindsLoopbackAndRejectsPortInUse(t *testing.T) {
-	// Occupy a free IPv4 loopback port to verify runServer returns an error when the port is already bound.
-	occupiedListener, err := net.Listen("tcp4", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("net.Listen(127.0.0.1:0) failed: %v", err)
-	}
-	occupiedPort := occupiedListener.Addr().(*net.TCPAddr).Port
+	t.Run("ipv4_port_in_use", func(t *testing.T) {
+		occupiedListener, err := net.Listen("tcp4", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("net.Listen(127.0.0.1:0) failed: %v", err)
+		}
+		occupiedPort := occupiedListener.Addr().(*net.TCPAddr).Port
 
-	proxyConfig := newDefaultProxyConfig()
-	proxyConfig.Port = occupiedPort
+		proxyConfig := newDefaultProxyConfig()
+		proxyConfig.Port = occupiedPort
 
-	if err := runServer(context.Background(), proxyConfig, newReadyzHandler("nonce")); err == nil {
+		if err := runServer(context.Background(), proxyConfig, newReadyzHandler("nonce")); err == nil {
+			occupiedListener.Close()
+			t.Fatalf("runServer() on occupied IPv4 port %d = nil, want non-nil error", occupiedPort)
+		}
 		occupiedListener.Close()
-		t.Fatalf("runServer() on occupied port %d = nil, want non-nil error", occupiedPort)
-	}
-	occupiedListener.Close()
+	})
+
+	t.Run("ipv6_port_in_use", func(t *testing.T) {
+		occupiedListener, err := net.Listen("tcp6", "[::1]:0")
+		if err != nil {
+			t.Skipf("IPv6 loopback not available: %v", err)
+		}
+		occupiedPort := occupiedListener.Addr().(*net.TCPAddr).Port
+
+		proxyConfig := newDefaultProxyConfig()
+		proxyConfig.Port = occupiedPort
+
+		if err := runServer(context.Background(), proxyConfig, newReadyzHandler("nonce")); err == nil {
+			occupiedListener.Close()
+			t.Fatalf("runServer() on occupied IPv6 port %d = nil, want non-nil error", occupiedPort)
+		}
+		occupiedListener.Close()
+	})
 }
 
 func TestRunServer_BindsOnlyToLoopback(t *testing.T) {
