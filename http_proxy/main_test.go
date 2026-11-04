@@ -461,7 +461,7 @@ func TestRouter(t *testing.T) {
 	authToken := "test-auth-token"
 
 	newTestRouter := func(mockRT *mockRoundTripper) http.Handler {
-		return newRouter(newReadyzHandler(nonceToken), requireAuthToken(authToken, newECPProxyHandler(mockRT)))
+		return newRouter(newReadyzHandler(nonceToken), createAuthenticatedHttpHandler(authToken, newECPProxyHandler(mockRT)))
 	}
 
 	t.Run("readyz_endpoint_does_not_require_auth_token", func(t *testing.T) {
@@ -579,7 +579,7 @@ func TestRouter(t *testing.T) {
 	})
 }
 
-func TestRequireAuthToken(t *testing.T) {
+func TestCreateAuthenticatedHttpHandler(t *testing.T) {
 	const authToken = "test-auth-token"
 	tests := []struct {
 		name           string
@@ -636,7 +636,7 @@ func TestRequireAuthToken(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRT := &mockRoundTripper{}
-			handler := requireAuthToken(tt.serverToken, newECPProxyHandler(mockRT))
+			handler := createAuthenticatedHttpHandler(tt.serverToken, newECPProxyHandler(mockRT))
 
 			req := httptest.NewRequest(http.MethodGet, testPath, nil)
 			req.Header.Set(targetHostHeader, "storage.mtls.googleapis.com")
@@ -647,10 +647,10 @@ func TestRequireAuthToken(t *testing.T) {
 			handler.ServeHTTP(rr, req)
 
 			if rr.Code != tt.wantStatusCode {
-				t.Errorf("requireAuthToken status = %d, want %d", rr.Code, tt.wantStatusCode)
+				t.Errorf("createAuthenticatedHttpHandler status = %d, want %d", rr.Code, tt.wantStatusCode)
 			}
 			if gotForwarded := mockRT.capturedRequest != nil; gotForwarded != tt.wantForwarded {
-				t.Errorf("requireAuthToken forwarded = %v, want %v", gotForwarded, tt.wantForwarded)
+				t.Errorf("createAuthenticatedHttpHandler forwarded = %v, want %v", gotForwarded, tt.wantForwarded)
 			}
 			if tt.wantForwarded {
 				if got := mockRT.capturedRequest.Header.Get(authTokenHeader); got != "" {

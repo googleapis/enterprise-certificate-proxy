@@ -362,7 +362,7 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 			}
 
 			const testAuthToken = "test-auth-token"
-			handler := requireAuthToken(testAuthToken, newECPProxyHandler(routingTransport))
+			handler := createAuthenticatedHttpHandler(testAuthToken, newECPProxyHandler(routingTransport))
 			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 			defer stop()
 

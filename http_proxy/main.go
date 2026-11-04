@@ -248,11 +248,12 @@ func newECPProxyHandler(transport http.RoundTripper) http.Handler {
 	})
 }
 
-// requireAuthToken wraps next so that it only receives requests carrying the
-// expected per-process shared secret in authTokenHeader. Requests with a missing
-// or mismatched token are rejected with 401 Unauthorized. The header is removed
-// before calling next so it is never forwarded to the target host.
-func requireAuthToken(authToken string, next http.Handler) http.Handler {
+// createAuthenticatedHttpHandler wraps next so that it only receives requests
+// carrying the expected per-process shared secret in authTokenHeader. Requests
+// with a missing or mismatched token are rejected with 401 Unauthorized. The
+// header is removed before calling next so it is never forwarded to the target
+// host.
+func createAuthenticatedHttpHandler(authToken string, next http.Handler) http.Handler {
 	expected := []byte(authToken)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		got := []byte(r.Header.Get(authTokenHeader))
@@ -280,7 +281,7 @@ func newReadyzHandler(nonceToken string) http.Handler {
 // newRouter creates the top-level HTTP router. It serves /readyz (without a
 // targetHostHeader) unauthenticated so the parent process can verify the server
 // via the nonce token, and forwards all other requests to the ECP proxy handler,
-// which must be wrapped with requireAuthToken by the caller.
+// which must be wrapped with createAuthenticatedHttpHandler by the caller.
 func newRouter(readyz, ecpProxy http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/readyz" && r.Header.Get(targetHostHeader) == "" {
@@ -296,34 +297,25 @@ func newRouter(readyz, ecpProxy http.Handler) http.Handler {
 // is never reachable from external network interfaces, and listens for OS
 // signals from the provided context to perform a graceful shutdown.
 func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handler) error {
-	addr := fmt.Sprintf("127.0.0.1:%d", proxyConfig.Port)
-
 	server := &http.Server{
-		Addr:    addr,
+		Addr:    fmt.Sprintf("127.0.0.1:%d", proxyConfig.Port),
 		Handler: handler,
 	}
 
-	listener, err := net.Listen("tcp4", addr)
-	if err != nil {
-		return fmt.Errorf("starting proxy server on %s: %w", addr, err)
-	}
-	defer listener.Close()
-
-	// Channel to receive errors from the server's Serve goroutine.
+	// Channel to receive errors from the server's ListenAndServe goroutine.
 	errChan := make(chan error, 1)
 
 	// Run the server in a goroutine.
 	go func() {
-		logger.Infof("Starting proxy server on %s", addr)
-		if err := server.Serve(listener); err != http.ErrServerClosed {
-			errChan <- fmt.Errorf("starting proxy server on %s: %w", addr, err)
+		logger.Infof("Starting proxy server on port %d", proxyConfig.Port)
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			errChan <- fmt.Errorf("failed to start proxy server: %w", err)
 		}
 	}()
 
 	// Block until we receive an error or a shutdown signal from the context.
 	select {
 	case err := <-errChan:
-		_ = server.Close()
 		return err
 	case <-ctx.Done():
 		logger.Info("Shutdown signal received, shutting down server gracefully...")
@@ -387,7 +379,7 @@ func run(ctx context.Context, cfg *AppConfig) error {
 
 	// Create the individual handlers
 	readyz := newReadyzHandler(cfg.NonceToken)
-	ecpProxy := requireAuthToken(cfg.AuthToken, newECPProxyHandler(routingTransport))
+	ecpProxy := createAuthenticatedHttpHandler(cfg.AuthToken, newECPProxyHandler(routingTransport))
 	router := newRouter(readyz, ecpProxy)
 
 	// Run the server
