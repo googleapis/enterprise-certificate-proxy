@@ -361,7 +361,8 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 				DefaultTransport: defaultTransport,
 			}
 
-			handler := newECPProxyHandler(routingTransport)
+			const testAuthToken = "test-auth-token"
+			handler := createAuthenticatedHttpHandler(testAuthToken, newECPProxyHandler(routingTransport))
 			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 			defer stop()
 
@@ -376,6 +377,7 @@ func TestECPProxyWithHTTPClient(t *testing.T) {
 			}
 
 			req.Header.Set("x-goog-ecpproxy-target-host", tc.targetHostHeader)
+			req.Header.Set(authTokenHeader, testAuthToken)
 			fmt.Printf("TestECPProxyWithHTTPClient: Requesting %s with target %s\n", req.URL, tc.targetHostHeader)
 			client := &http.Client{}
 			resp, err := client.Do(req)

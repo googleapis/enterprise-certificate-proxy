@@ -21,6 +21,7 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -30,6 +31,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -43,6 +45,15 @@ const (
 	// targetHostHeader is the custom HTTP header used by clients to specify the
 	// destination host for the ECPPProxy to forward the request to.
 	targetHostHeader = "x-goog-ecpproxy-target-host"
+	// authTokenHeader is the custom HTTP header that clients must set on every
+	// proxied request. Its value must match the per-process shared secret the
+	// proxy was started with. It is stripped before forwarding.
+	authTokenHeader = "x-goog-ecpproxy-auth-token"
+	// authTokenEnvVar is the environment variable used to pass the per-process
+	// shared secret to the proxy. An environment variable is used instead of a
+	// command-line flag so the secret is not visible to other local users
+	// through the process list.
+	authTokenEnvVar = "ECP_HTTP_PROXY_AUTH_TOKEN"
 	// ecpInternalErrorHeader is a custom HTTP header added to error responses
 	// to indicate that the error originated within the ECPProxy.
 	ecpInternalErrorHeader = "x-goog-ecpproxy-error"
@@ -58,12 +69,17 @@ const (
 	defaultShutdownTimeout     = 5 * time.Second
 )
 
-// AppConfig holds the application configuration parsed from command-line flags.
+// AppConfig holds the application configuration parsed from command-line flags
+// and the environment.
 type AppConfig struct {
 	Port                             int
 	EnterpriseCertificateFilePath    string
 	GcloudConfiguredUpstreamProxyURL string
 	NonceToken                       string
+	// AuthToken is the per-process shared secret that clients must send in the
+	// authTokenHeader on every proxied request when set. It is read from
+	// authTokenEnvVar.
+	AuthToken string
 }
 
 func (cfg *AppConfig) validate() error {
@@ -76,14 +92,17 @@ func (cfg *AppConfig) validate() error {
 	return nil
 }
 
-// newAppConfigFromFlags parses command-line flags, validates them, and returns a new AppConfig.
+// newAppConfigFromFlags parses command-line flags and the environment, validates
+// them, and returns a new AppConfig.
 func newAppConfigFromFlags() (*AppConfig, error) {
 	cfg := &AppConfig{}
 	flag.IntVar(&cfg.Port, "port", 0, "The port to listen on for HTTP requests. (Required)")
 	flag.StringVar(&cfg.EnterpriseCertificateFilePath, "enterprise_certificate_file_path", "", "The path to the enterprise certificate file.")
 	flag.StringVar(&cfg.GcloudConfiguredUpstreamProxyURL, "gcloud_configured_upstream_proxy_url", "", "The upstream proxy URL configured through gcloud.")
-	flag.StringVar(&cfg.NonceToken, "nonce_token", "", "The nonce token is returned in /readyz endpoint, and can be used to authenticate this server. (Required)")
+	flag.StringVar(&cfg.NonceToken, "nonce_token", "", "The nonce token is returned in /readyz endpoint, and can be used by the parent process to verify this server. (Required)")
 	flag.Parse()
+
+	cfg.AuthToken = os.Getenv(authTokenEnvVar)
 
 	if err := cfg.validate(); err != nil {
 		return nil, err
@@ -227,6 +246,28 @@ func newECPProxyHandler(transport http.RoundTripper) http.Handler {
 	})
 }
 
+// createAuthenticatedHttpHandler wraps next so that when authToken is non-empty,
+// it only receives requests carrying the expected per-process shared secret in
+// authTokenHeader. Requests with a missing or mismatched token are rejected with
+// 401 Unauthorized. When authToken is empty (e.g., when launched by an older
+// gcloud version that does not set ECP_HTTP_PROXY_AUTH_TOKEN), requests are
+// allowed through for backward compatibility. The header is always removed
+// before calling next so it is never forwarded to the target host.
+func createAuthenticatedHttpHandler(authToken string, next http.Handler) http.Handler {
+	expected := []byte(authToken)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if len(expected) > 0 {
+			got := []byte(r.Header.Get(authTokenHeader))
+			if subtle.ConstantTimeCompare(got, expected) != 1 {
+				writeError(w, fmt.Errorf("missing or invalid %s header", authTokenHeader), "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+		}
+		r.Header.Del(authTokenHeader)
+		next.ServeHTTP(w, r)
+	})
+}
+
 // newReadyzHandler creates an http.Handler for the /readyz endpoint.
 // It writes the nonce token to the response body.
 func newReadyzHandler(nonceToken string) http.Handler {
@@ -239,16 +280,48 @@ func newReadyzHandler(nonceToken string) http.Handler {
 	})
 }
 
+// newRouter creates the top-level HTTP router. It serves /readyz (without a
+// targetHostHeader) unauthenticated so the parent process can verify the server
+// via the nonce token, and forwards all other requests to the ECP proxy handler,
+// which must be wrapped with createAuthenticatedHttpHandler by the caller.
+func newRouter(readyz, ecpProxy http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/readyz" && r.Header.Get(targetHostHeader) == "" {
+			readyz.ServeHTTP(w, r)
+			return
+		}
+		ecpProxy.ServeHTTP(w, r)
+	})
+}
+
 // runServer starts the HTTP server with the given handler and configuration.
-// It listens for OS signals from the provided context to perform a graceful shutdown.
+// It binds explicitly to the loopback interfaces (127.0.0.1 and ::1) so the
+// proxy is never reachable from external network interfaces, and listens for OS
+// signals from the provided context to perform a graceful shutdown.
 func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handler) error {
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", proxyConfig.Port),
+		Addr:    fmt.Sprintf("127.0.0.1:%d", proxyConfig.Port),
 		Handler: handler,
 	}
 
-	// Channel to receive errors from the server's ListenAndServe goroutine.
-	errChan := make(chan error, 1)
+	// Channel to receive errors from the server's ListenAndServe / Serve goroutines.
+	errChan := make(chan error, 2)
+
+	// Also bind IPv6 loopback ([::1]) when available so older gcloud versions
+	// connecting to "localhost" work on IPv6-first systems and cannot be
+	// intercepted by another local process squatting [::1] on the same port.
+	ipv6Addr := fmt.Sprintf("[::1]:%d", proxyConfig.Port)
+	if ipv6Listener, err := net.Listen("tcp6", ipv6Addr); err == nil {
+		defer ipv6Listener.Close()
+		go func() {
+			logger.Infof("Starting proxy server on %s", ipv6Addr)
+			if err := server.Serve(ipv6Listener); err != http.ErrServerClosed {
+				errChan <- fmt.Errorf("failed to start proxy server on %s: %w", ipv6Addr, err)
+			}
+		}()
+	} else if errors.Is(err, syscall.EADDRINUSE) {
+		return fmt.Errorf("failed to start proxy server on %s: %w", ipv6Addr, err)
+	}
 
 	// Run the server in a goroutine.
 	go func() {
@@ -261,6 +334,7 @@ func runServer(ctx context.Context, proxyConfig *ProxyConfig, handler http.Handl
 	// Block until we receive an error or a shutdown signal from the context.
 	select {
 	case err := <-errChan:
+		_ = server.Close()
 		return err
 	case <-ctx.Done():
 		logger.Info("Shutdown signal received, shutting down server gracefully...")
@@ -324,15 +398,9 @@ func run(ctx context.Context, cfg *AppConfig) error {
 
 	// Create the individual handlers
 	readyz := newReadyzHandler(cfg.NonceToken)
-	ecpProxy := newECPProxyHandler(routingTransport)
+	ecpProxy := createAuthenticatedHttpHandler(cfg.AuthToken, newECPProxyHandler(routingTransport))
+	router := newRouter(readyz, ecpProxy)
 
-	router := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/readyz" && r.Header.Get(targetHostHeader) == "" {
-			readyz.ServeHTTP(w, r)
-			return
-		}
-		ecpProxy.ServeHTTP(w, r)
-	})
 	// Run the server
 	return runServer(ctx, proxyConfig, router)
 }
